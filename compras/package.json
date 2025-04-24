@@ -1,0 +1,14 @@
+{
+    "name": "livre-markket",
+    "version": "1.0.0",
+    "description": "Servidor de compras para implementar transacciones distribuidas",
+    "main": "SimuladorComprasCC.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "demian",
+    "license": "ISC",
+    "dependencies": {
+        "atomic-sleep": "^1.0.0"
+    }
+}
