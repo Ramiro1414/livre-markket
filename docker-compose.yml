@@ -1,0 +1,15 @@
+services:
+
+  compras:
+    build:
+      context: ./compras
+      dockerfile: Dockerfile
+    container_name: compras
+    working_dir: /home/compras
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./compras:/home/compras
+    #command: node simuladorComprasCC
+    command: sh
