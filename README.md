@@ -79,6 +79,105 @@ En el repositorio git de la asignatura se encuentra la versión base implementad
 7. **Despliegue y validación**: ejecute la simulación y evalúe lo que pasa en esta nueva versión. ¿Qué inconvenientes se observan? realice un resumen de los desafíos y una propuesta para solucionarlos. ¿Es asincrónico el código?
 8. **4º Evolución del código**: Refactoring y solución de los problemas de comunicación. Realice las modificaciones pertinentes para que efectivamente las interacciones de comunicación entre los servidores sean independientes y en paralelo. ¿Qué mecanismo visto en teoría se debe implementar?
 
+## Evolución 3: Seguridad - Implementación de HTTPS/TLS
+
+1. **Objetivo**: Proteger las comunicaciones entre servicios mediante el cifrado de datos en tránsito, implementando HTTPS/TLS para garantizar confidencialidad e integridad de las transacciones.
+2. **Implementación**: Migrar todos los servicios de HTTP a HTTPS, configurando certificados SSL/TLS y estableciendo comunicaciones cifradas extremo a extremo entre todos los componentes de la arquitectura.
+3. **Desafíos**:
+   - Generación y gestión de certificados SSL/TLS para cada servicio.
+   - Validación de certificados en comunicaciones entre servicios.
+
+### Actividades propuestas:
+1. **Modificación y Generación de Certificados**
+   - Para cada servicio (web, compras, envíos, infracciones, pagos, publicaciones), 
+   - Genere: Clave privada RSA de 2048 bits; Certificado autofirmado válido por 365 días
+   - Utilice OpenSSL con los siguientes parámetros: -   **Common Name (CN):** nombre del servicio -   **Organization (O):** "Livre Markket" -   **Country (C):** AR 
+2. **Despliegue y Validación HTTPS**
+   - Verificación inicial: Levante la nueva arquitectura y verifique: - Todos los servicios inician sin errores. - Los logs muestran "HTTPS" en lugar de "HTTP" - Los certificados se cargan correctamente.
+   -  Ejecución de transacciones: Ejecute una simulación completa de compras - Verifique que todas las transacciones se completan - Revise los logs para confirmar comunicaciones HTTPS exitosas.
+   - Manejo de errores SSL/TLS: Si hay errores: -   ¿Qué errores de certificado aparecen? -   ¿Cómo se resuelven? -   ¿Por qué usamos `rejectUnauthorized: false` en desarrollo? -   ¿Qué debería hacerse en producción?
+3. **Captura de Tráfico HTTPS (Segundo Sniffing)**
+   - Repita el análisis de tráfico, ahora con HTTPS implementado.
+   - **Análisis comparativo:** Examine la captura de tráfico y responda: -   ¿Es posible leer el contenido de las peticiones ahora? -   ¿Qué información es visible en texto plano? -   ¿Qué información está cifrada? -   ¿Se pudo extraer datos sensibles? -   ¿Qué diferencia se observa respecto a HTTP?
+4. **Reflexión Final**: Mencione escenarios que HTTPS no previene o resuelve, con esta arquitectura implementada hasta el momento en términos de Seguridad.
+
+## Evolución 4: Seguridad - Implementación Autenticación
+
+Actualmente cualquier servicio puede llamar a cualquier endpoint de cualquier servicio sin identificarse. Los certificados SSL cifran el canal de comunicación, pero no autentican quién está llamando.
+
+Si alguien despliega un servicio malicioso en la misma red Docker, podría llamar directamente a endpoints como https://pagos:6004/pagarProducto o https://compras:6001/confirmarPago sin pasar por el flujo legítimo. Ningún servicio tiene forma de saber si la solicitud viene de un servicio autorizado o de un intruso.
+
+1. **Objetivo**: 
+
+Diseñar e implementar un mecanismo de autenticación entre servicios para que cada servicio pueda verificar que quien lo llama es un servicio conocido y autorizado del sistema.
+
+### Actividades propuestas
+
+1. **Requerimientos funcionales**
+
+Si un servicio recibe una llamada de un origen no autorizado, debe rechazarla con una respuesta HTTP apropiada.
+Si un servicio recibe una llamada de un servicio legítimo del sistema, debe aceptarla y procesarla normalmente.
+Cada servicio debe poder identificar qué servicio lo está llamando (no solo si es válido, sino quién es).
+El mecanismo debe funcionar en el entorno Docker existente sin modificar la lógica de negocio (el flujo de compra debe seguir funcionando igual).
+
+2. **Diseño**
+
+Antes de codificar, documentar brevemente la solución propuesta:
+
+- ¿Qué mecanismo van a usar para autenticar los servicios?
+- ¿Dónde se almacenan las credenciales?
+- ¿Cómo se transmiten en cada llamada HTTP?
+- ¿Dónde y cómo se validan?
+
+3. **Implementación**
+
+Implementar la solución diseñada en la Consigna 1 sobre el proyecto Livre Markket. El flujo completo de compra debe seguir funcionando, pero ahora con autenticación entre servicios.
+
+4. **Prueba de seguridad**
+
+Ejecutar las pruebas necesarias que demuestren lo siguiente:
+
+- Una llamada sin credenciales debe ser rechazada.
+- Una llamada con credenciales inválidas debe ser rechazada.
+- Una llamada con credenciales válidas debe ser aceptada.
+
+5. **Análisis**
+
+Responder las siguientes preguntas sobre la solución implementada:
+Seguridad:
+* ¿Qué sucede si un atacante obtiene acceso a las credenciales de un servicio? 
+* Las credenciales viajan en cada request HTTP. Aunque usamos HTTPS, el proyecto usa rejectUnauthorized: false para los certificados. ¿Qué implicancias de seguridad tiene esto?
+* ¿Las credenciales de su implementación tienen fecha de vencimiento? ¿Qué problema causa que no la tengan (o que la tengan)?
+* Si se necesita cambiar la credencial de un servicio por sospecha de compromiso, ¿qué pasos hay que seguir? ¿Se puede hacer sin interrumpir el sistema?
+* ¿Puede un servicio receptor distinguir cuál servicio lo está llamando? ¿Se podría restringir para que solo ciertos servicios accedan a ciertos endpoints?
+* ¿Qué limitación tiene su implementación respecto a permisos por operación? (Ejemplo: ¿puede un servicio tener permiso de lectura pero no de escritura?)
+* Listar al menos 3 limitaciones concretas de su solución que motivarían buscar un mecanismo más robusto.
+
+## Evolución 5: eguridad — Tokens JWT (HS256)
+
+1. **Objetivo**: Reemplazar el mecanismo de autenticación de la Parte 3.3 por JSON Web Tokens (JWT) firmados con algoritmo HMAC-SHA256 (HS256), de manera que cada servicio genere tokens autocontenidos con información de identidad y tiempo de expiración.
+2. **Conceptos Clave**
+   - **JWT (JSON Web Token):** Estándar (RFC 7519) que define un formato compacto y autocontenido para transmitir información entre partes como un objeto JSON firmado.
+   - **HS256:** Algoritmo de firma simétrica. Se utiliza un **mismo secreto compartido** para firmar y verificar el token.
+   - **Claims:** Datos contenidos dentro del token (emisor, expiración, permisos, etc.).
+
+> **Tip:** Un JWT tiene tres partes separadas por puntos: `header.payload.signature`. Pueden decodificar el header y el payload en [jwt.io](https://jwt.io) para inspeccionar su contenido.
+
+3. **Requerimientos Funcionales**
+
+- Cada servicio debe **generar un JWT** al momento de llamar a otro servicio.
+- El token debe incluir como mínimo: **emisor** (qué servicio lo generó), **fecha de emisión** y **fecha de expiración**.
+- El tiempo de expiración del token debe ser **corto** (por ejemplo, 30 a 60 segundos).
+- El servicio receptor debe **verificar la firma** y **validar que el token no esté expirado** antes de aceptar la llamada.
+- Si el token es inválido, está expirado o no está presente, el servicio debe responder con el código HTTP apropiado.
+- El flujo de compra debe seguir funcionando sin modificar la lógica de negocio.
+
+> **Tip:** La librería `jsonwebtoken` de Node.js permite firmar con `jwt.sign()` y verificar con `jwt.verify()`. 
+
+### actividades propuestas
+
+1. 
+
 ---
 # Parte 4:
 
