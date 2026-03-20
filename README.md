@@ -61,7 +61,7 @@ En el repositorio git de la asignatura se encuentra la versión base implementad
 ---
 # Parte 3:
 
-## Evolución 2: Descomposición en Módulos RESTful
+## Evolución 2: Descomposición en Módulos RESTful + Seguridad
 1. **Objetivo**: Transicionar la arquitectura monolítica hacia una **arquitectura de servicios RESTful** donde cada módulo es independiente.
 2. **Implementación**: Desplegar cada módulo como un servicio REST, de manera que el módulo de Compras actúe como orquestador, realizando llamadas a cada servicio de forma sincrónica.
 3. **Desafíos**:
