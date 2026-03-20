@@ -79,14 +79,20 @@ En el repositorio git de la asignatura se encuentra la versión base implementad
 7. **Despliegue y validación**: ejecute la simulación y evalúe lo que pasa en esta nueva versión. ¿Qué inconvenientes se observan? realice un resumen de los desafíos y una propuesta para solucionarlos. ¿Es asincrónico el código?
 8. **4º Evolución del código**: Refactoring y solución de los problemas de comunicación. Realice las modificaciones pertinentes para que efectivamente las interacciones de comunicación entre los servidores sean independientes y en paralelo. ¿Qué mecanismo visto en teoría se debe implementar?
 
-## Evolución 3: Seguridad - Implementación de HTTPS/TLS
+## Análisis de Seguridad en Comunicaciones HTTP
+Antes de continuar evolucionando la arquitectura, es necesario analizar las implicancias de seguridad del esquema de comunicación HTTP implementado.
+### Actividades propuestas
+1. **Captura y Análisis de Tráfico de Red:** Utilizando herramientas de análisis de red, realice una captura del tráfico entre los servicios durante la ejecución de transacciones.
+   - ¿Es posible identificar las peticiones HTTP entre servicios?
+   - ¿Qué información se puede leer en texto plano?
+   - Evalúe qué riesgos de seguridad se pueden presentar.
 
+## Evolución 3: Seguridad - Implementación de HTTPS/TLS
 1. **Objetivo**: Proteger las comunicaciones entre servicios mediante el cifrado de datos en tránsito, implementando HTTPS/TLS para garantizar confidencialidad e integridad de las transacciones.
 2. **Implementación**: Migrar todos los servicios de HTTP a HTTPS, configurando certificados SSL/TLS y estableciendo comunicaciones cifradas extremo a extremo entre todos los componentes de la arquitectura.
 3. **Desafíos**:
    - Generación y gestión de certificados SSL/TLS para cada servicio.
    - Validación de certificados en comunicaciones entre servicios.
-
 ### Actividades propuestas:
 1. **Modificación y Generación de Certificados**
    - Para cada servicio (web, compras, envíos, infracciones, pagos, publicaciones), 
