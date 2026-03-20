@@ -102,86 +102,157 @@ En el repositorio git de la asignatura se encuentra la versión base implementad
 4. **Reflexión Final**: Mencione escenarios que HTTPS no previene o resuelve, con esta arquitectura implementada hasta el momento en términos de Seguridad.
 
 ## Evolución 4: Seguridad - Implementación Autenticación
-
 Actualmente cualquier servicio puede llamar a cualquier endpoint de cualquier servicio sin identificarse. Los certificados SSL cifran el canal de comunicación, pero no autentican quién está llamando.
-
 Si alguien despliega un servicio malicioso en la misma red Docker, podría llamar directamente a endpoints como https://pagos:6004/pagarProducto o https://compras:6001/confirmarPago sin pasar por el flujo legítimo. Ningún servicio tiene forma de saber si la solicitud viene de un servicio autorizado o de un intruso.
-
 1. **Objetivo**: 
-
 Diseñar e implementar un mecanismo de autenticación entre servicios para que cada servicio pueda verificar que quien lo llama es un servicio conocido y autorizado del sistema.
-
 ### Actividades propuestas
-
 1. **Requerimientos funcionales**
-
-Si un servicio recibe una llamada de un origen no autorizado, debe rechazarla con una respuesta HTTP apropiada.
-Si un servicio recibe una llamada de un servicio legítimo del sistema, debe aceptarla y procesarla normalmente.
-Cada servicio debe poder identificar qué servicio lo está llamando (no solo si es válido, sino quién es).
-El mecanismo debe funcionar en el entorno Docker existente sin modificar la lógica de negocio (el flujo de compra debe seguir funcionando igual).
-
+   - Si un servicio recibe una llamada de un origen no autorizado, debe rechazarla con una respuesta HTTP apropiada.
+   - Si un servicio recibe una llamada de un servicio legítimo del sistema, debe aceptarla y procesarla normalmente.
+   - Cada servicio debe poder identificar qué servicio lo está llamando (no solo si es válido, sino quién es).
+   - El mecanismo debe funcionar en el entorno Docker existente sin modificar la lógica de negocio (el flujo de compra debe seguir funcionando igual).
 2. **Diseño**
-
 Antes de codificar, documentar brevemente la solución propuesta:
-
-- ¿Qué mecanismo van a usar para autenticar los servicios?
-- ¿Dónde se almacenan las credenciales?
-- ¿Cómo se transmiten en cada llamada HTTP?
-- ¿Dónde y cómo se validan?
-
+   - ¿Qué mecanismo van a usar para autenticar los servicios?
+   - ¿Dónde se almacenan las credenciales?
+   - ¿Cómo se transmiten en cada llamada HTTP?
+   - ¿Dónde y cómo se validan?
 3. **Implementación**
-
 Implementar la solución diseñada en la Consigna 1 sobre el proyecto Livre Markket. El flujo completo de compra debe seguir funcionando, pero ahora con autenticación entre servicios.
-
 4. **Prueba de seguridad**
-
 Ejecutar las pruebas necesarias que demuestren lo siguiente:
-
-- Una llamada sin credenciales debe ser rechazada.
-- Una llamada con credenciales inválidas debe ser rechazada.
-- Una llamada con credenciales válidas debe ser aceptada.
-
+   - Una llamada sin credenciales debe ser rechazada.
+   - Una llamada con credenciales inválidas debe ser rechazada.
+   - Una llamada con credenciales válidas debe ser aceptada.
 5. **Análisis**
-
 Responder las siguientes preguntas sobre la solución implementada:
 Seguridad:
-* ¿Qué sucede si un atacante obtiene acceso a las credenciales de un servicio? 
-* Las credenciales viajan en cada request HTTP. Aunque usamos HTTPS, el proyecto usa rejectUnauthorized: false para los certificados. ¿Qué implicancias de seguridad tiene esto?
-* ¿Las credenciales de su implementación tienen fecha de vencimiento? ¿Qué problema causa que no la tengan (o que la tengan)?
-* Si se necesita cambiar la credencial de un servicio por sospecha de compromiso, ¿qué pasos hay que seguir? ¿Se puede hacer sin interrumpir el sistema?
-* ¿Puede un servicio receptor distinguir cuál servicio lo está llamando? ¿Se podría restringir para que solo ciertos servicios accedan a ciertos endpoints?
-* ¿Qué limitación tiene su implementación respecto a permisos por operación? (Ejemplo: ¿puede un servicio tener permiso de lectura pero no de escritura?)
-* Listar al menos 3 limitaciones concretas de su solución que motivarían buscar un mecanismo más robusto.
+   - ¿Qué sucede si un atacante obtiene acceso a las credenciales de un servicio? 
+   - Las credenciales viajan en cada request HTTP. Aunque usamos HTTPS, el proyecto usa rejectUnauthorized: false para los certificados. ¿Qué implicancias de seguridad tiene esto?
+   - ¿Las credenciales de su implementación tienen fecha de vencimiento? ¿Qué problema causa que no la tengan (o que la tengan)?
+   - Si se necesita cambiar la credencial de un servicio por sospecha de compromiso, ¿qué pasos hay que seguir? ¿Se puede hacer sin interrumpir el sistema?
+   - ¿Puede un servicio receptor distinguir cuál servicio lo está llamando? ¿Se podría restringir para que solo ciertos servicios accedan a ciertos endpoints?
+   - ¿Qué limitación tiene su implementación respecto a permisos por operación? (Ejemplo: ¿puede un servicio tener permiso de lectura pero no de escritura?)
+   - Listar al menos 3 limitaciones concretas de su solución que motivarían buscar un mecanismo más robusto.
 
 ## Evolución 5: eguridad — Tokens JWT (HS256)
-
 1. **Objetivo**: Reemplazar el mecanismo de autenticación de la Parte 3.3 por JSON Web Tokens (JWT) firmados con algoritmo HMAC-SHA256 (HS256), de manera que cada servicio genere tokens autocontenidos con información de identidad y tiempo de expiración.
 2. **Conceptos Clave**
    - **JWT (JSON Web Token):** Estándar (RFC 7519) que define un formato compacto y autocontenido para transmitir información entre partes como un objeto JSON firmado.
    - **HS256:** Algoritmo de firma simétrica. Se utiliza un **mismo secreto compartido** para firmar y verificar el token.
    - **Claims:** Datos contenidos dentro del token (emisor, expiración, permisos, etc.).
-
 > **Tip:** Un JWT tiene tres partes separadas por puntos: `header.payload.signature`. Pueden decodificar el header y el payload en [jwt.io](https://jwt.io) para inspeccionar su contenido.
-
 3. **Requerimientos Funcionales**
-
-- Cada servicio debe **generar un JWT** al momento de llamar a otro servicio.
-- El token debe incluir como mínimo: **emisor** (qué servicio lo generó), **fecha de emisión** y **fecha de expiración**.
-- El tiempo de expiración del token debe ser **corto** (por ejemplo, 30 a 60 segundos).
-- El servicio receptor debe **verificar la firma** y **validar que el token no esté expirado** antes de aceptar la llamada.
-- Si el token es inválido, está expirado o no está presente, el servicio debe responder con el código HTTP apropiado.
-- El flujo de compra debe seguir funcionando sin modificar la lógica de negocio.
-
+   - Cada servicio debe **generar un JWT** al momento de llamar a otro servicio.
+   - El token debe incluir como mínimo: **emisor** (qué servicio lo generó), **fecha de emisión** y **fecha de expiración**.
+   - El tiempo de expiración del token debe ser **corto** (por ejemplo, 30 a 60 segundos).
+   - El servicio receptor debe **verificar la firma** y **validar que el token no esté expirado** antes de aceptar la llamada.
+   - Si el token es inválido, está expirado o no está presente, el servicio debe responder con el código HTTP apropiado.
+   - El flujo de compra debe seguir funcionando sin modificar la lógica de negocio.
 > **Tip:** La librería `jsonwebtoken` de Node.js permite firmar con `jwt.sign()` y verificar con `jwt.verify()`. 
-
 ### actividades propuestas
+1. **Diseño**
+Antes de codificar, documentar brevemente:
+   - ¿Dónde se almacena el secreto compartido para la firma HS256?
+   - ¿Qué claims va a incluir el payload del JWT?
+   - ¿Cómo se transmite el token en cada llamada HTTP?
+   - ¿Cómo se valida en el servicio receptor?
+   - ¿Qué tiempo de expiración van a usar y por qué?
+> **Tip:** Investigar el header HTTP `Authorization: Bearer <token>` como forma estándar de transmitir tokens.
+2. **Implementación**
+Implementar la solución diseñada en la Actividad 1 sobre el proyecto Livre Markket, reemplazando el mecanismo de autenticación de la Parte 3.3.
+> **Tip:** El middleware de validación ahora debe verificar la firma del JWT y extraer los claims, en lugar de buscar una clave en un archivo.
+3. **Prueba de Seguridad**
+Ejecutar y documentar las pruebas necesarias que demuestren que:
+   - Una llamada **sin token** es rechazada.
+   - Una llamada con un **token expirado** es rechazada.
+   - Una llamada con un **token firmado con un secreto diferente** es rechazada.
+   - Una llamada con un **token válido y vigente** es aceptada.
+   - **Modificar el payload** de un token válido (por ejemplo, cambiar el emisor) y verificar que el servicio lo rechaza.
+> **Tip:** Para generar un token expirado en el script de prueba, pueden firmarlo con una expiración de 1 segundo y esperar antes de usarlo.
+4. **Análisis**
+   - ¿Qué información viaja dentro del JWT que antes no viajaba con el mecanismo de la Parte 3.3? ¿Qué ventaja concreta aporta esto?
+   - ¿El servicio receptor necesita consultar alguna base de datos o archivo externo para validar el token? ¿Por qué?
+   - ¿Qué mejora aporta la expiración del token respecto al mecanismo anterior? ¿Qué pasa si un token es interceptado?
+   - ¿Cuántos servicios conocen el secreto de firma en su implementación? ¿Qué pasa si uno de ellos es comprometido?
+   - Con HS256, cualquier servicio que pueda **verificar** un token también puede **generar** tokens válidos. ¿Qué riesgo implica esto? ¿Cómo se podría separar la capacidad de firmar de la capacidad de verificar?
+   - Listar al menos 3 limitaciones de JWT con HS256 que motivarían buscar una solución con firma asimétrica (RS256).
 
-1. 
+## Evolución 6: Seguridad — Tokens JWT (RS256)
+En la Parte 3.4 implementaron JWT con firma simétrica (HS256). Si bien resolvió problemas de la etapa anterior — tokens autocontenidos, con expiración y con información del emisor — el secreto compartido introduce un riesgo: cualquier servicio que pueda verificar un token también puede generar tokens válidos. Si un solo servicio es comprometido, el atacante puede emitir tokens haciéndose pasar por cualquier otro servicio.
+1. **Objetivo:** Migrar la firma de los JWT de **HS256 (simétrica)** a **RS256 (asimétrica)**, de manera que cada servicio firme con su **clave privada** y los demás verifiquen con su **clave pública**. Esto separa la capacidad de emitir tokens de la capacidad de validarlos.
+2. **Conceptos Clave:**
+   - **RS256:** Algoritmo de firma asimétrica. El emisor firma con su clave privada; el receptor verifica con la clave pública del emisor.
+   - **Clave privada:** Solo la conoce el servicio que firma. Nunca se comparte.
+   - **Clave pública:** Se distribuye a todos los servicios que necesitan verificar tokens de ese emisor.
+> **Tip:** Pueden generar un par de claves RSA con OpenSSL:
+> ```
+> openssl genrsa -out private.key 2048
+> openssl rsa -in private.key -pubout -out public.key
+> ```
+3. **Requerimientos Funcionales:**
+   - Cada servicio debe tener su **propio par de claves** (privada + pública).
+   - Al llamar a otro servicio, debe firmar el JWT con **su clave privada**.
+   - El servicio receptor debe verificar el token usando la **clave pública del emisor**.
+   - Se deben mantener los claims de la Parte 3.4 (emisor, fecha de emisión, expiración).
+   - El flujo de compra debe seguir funcionando sin modificar la lógica de negocio.
+### Actividades Propuestas
+1. **Diseño:** Antes de codificar, documentar brevemente:
+   - ¿Cómo se generan y distribuyen las claves de cada servicio?
+   - ¿Dónde se almacena la clave privada de cada servicio? ¿Y las claves públicas de los demás?
+   - ¿Qué cambia en el middleware de verificación respecto a la Parte 3.4?
+   - ¿Cómo sabe el receptor qué clave pública usar para verificar un token?
+> **Tip:** El claim `iss` (issuer) del JWT indica quién emitió el token. El receptor puede usar ese valor para seleccionar la clave pública correspondiente.
+2. **Implementación:** Implementar la solución diseñada en la Actividad 1 sobre el proyecto Livre Markket, reemplazando la firma HS256 de la Parte 3.4 por RS256.
+> **Tip:** En `jsonwebtoken`, la firma RS256 se usa pasando `{ algorithm: 'RS256' }` tanto en `jwt.sign()` como en `jwt.verify()`. La clave privada y pública se leen como strings con `fs.readFileSync()`.
+3. **Pruebas:** Ejecutar y documentar las pruebas necesarias que demuestren que:
+   - Una llamada con un token **firmado con una clave privada desconocida** es rechazada.
+   - Una llamada con un token **firmado con la clave privada de un servicio pero con el claim `iss` de otro** es rechazada (la clave pública no coincide).
+   - Una llamada con un **token válido firmado con la clave privada correcta** es aceptada.
+   - **Comprometer la clave pública** de un servicio no permite generar tokens válidos (a diferencia de HS256 donde comprometer el secreto sí lo permitía).
+4. **Análisis:**
+   - ¿Qué mejora concreta aporta RS256 sobre HS256 en cuanto a la separación de responsabilidades (firmar vs. verificar)?
+   - Si un servicio receptor es comprometido, ¿el atacante puede generar tokens válidos haciéndose pasar por otro servicio? ¿Por qué? Comparar con lo que pasaba en HS256.
+   - ¿Cuántos pares de claves existen en el sistema? ¿Cuántas claves públicas necesita conocer cada servicio receptor?
+   - Si se agrega un nuevo servicio, ¿qué se necesita distribuir a los demás servicios? ¿Y si se necesita revocar un servicio comprometido?
+   - Cada servicio genera y firma sus propios tokens. ¿Existe una autoridad central que decida quién puede emitir tokens y con qué permisos? ¿Qué problemas causa esta falta de centralización?
+   - ¿Cómo se manejan actualmente los permisos o scopes? ¿Cada servicio decide por su cuenta qué claims aceptar?
+   - Listar al menos 3 limitaciones de esta solución que motivarían delegar la emisión de tokens a un **servidor de autorización centralizado** (como en OAuth2).
+
+## Evolución 7: Seguridad — OAuth2 (Diseño y Análisis)
+1. **Objetivo:** Analizar críticamente la implementación realizada en las partes anteriores, investigar el protocolo OAuth2 (flujo Client Credentials), y diseñar una propuesta de evolución para Livre Markket que delegue la emisión de tokens a una autoridad central.
+
+### Actividades
+1. **Análisis de la solución actual:** Partiendo de **su propia implementación** de la última evolución de seguridad, responder:
+   - ¿Quién firma los tokens en su implementación actual? ¿Quién decide qué servicios pueden emitir tokens?
+   - Si un servicio de su sistema es comprometido, ¿qué alcance tiene el daño? ¿El atacante puede hacerse pasar por otros servicios? Justificar en base a cómo funciona su código.
+   - Si necesitan agregar un nuevo servicio al sistema, ¿qué pasos deben realizar? ¿Hay que intervenir los servicios existentes?
+   - Si necesitan revocar el acceso de un servicio comprometido, ¿cómo lo harían?
+   - Identificar al menos **3 debilidades concretas** de su implementación actual que justifiquen buscar una solución con autoridad centralizada.
+2. **Propuesta de evolución con OAuth2:** Investigar el flujo **OAuth2 Client Credentials** (RFC 6749, Sección 4.4) y elaborar una propuesta de evolución para Livre Markket. La propuesta debe incluir:
+   -Diagrama de arquitectura** que muestre los 6 servicios existentes, el servidor de autorización como componente nuevo, y las interacciones entre ellos.
+   - Descripción paso a paso** del flujo de autenticación en una llamada concreta (por ejemplo: `compras` llama a `infracciones`), indicando:
+      - ¿Cómo obtiene el emisor un token?
+      - ¿Cómo lo transmite al receptor?
+      - ¿Cómo lo verifica el receptor?
+      - ¿Contra qué clave verifica y cómo la obtiene?
+   - Responder las siguientes preguntas sobre la propuesta:**
+      - ¿Qué componentes de su implementación actual dejarían de ser necesarios? (archivos, claves, variables de entorno, middleware, etc.)
+      - ¿Qué componentes se modificarían y cómo?
+      - ¿Qué claims adicionales podría incluir un servidor de autorización en los tokens que su implementación actual no tiene? ¿Para qué servirían?
+      - ¿Cómo se resolvería la distribución de claves públicas de forma automática, sin copiar archivos manualmente?
+      - ¿Conviene que cada servicio solicite un token nuevo en cada llamada o debería cachearlo? ¿Qué criterio usarían para renovarlo?
+      - El servidor de autorización se convierte en un componente del cual depende todo el sistema. ¿Qué pasa si se cae? Proponer al menos una estrategia de mitigación.
+3. **Análisis comparativo y cierre:**
+   - La centralización que propone OAuth2 resuelve varias limitaciones de las etapas anteriores. ¿Introduce nuevos riesgos? Mencionar al menos dos.
+   - ¿Qué limitaciones tendría todavía su propuesta para un entorno de producción real? Listar al menos tres.
+   - Investigar brevemente qué es **OpenID Connect (OIDC)** y en qué se diferencia de OAuth2. ¿En qué escenario del sistema Livre Markket podría ser útil?
 
 ---
 # Parte 4:
 
-## Evolución 3: Comunicación Asincrónica mediante Mensajería Distribuida
+## Evolución 8: Comunicación Asincrónica mediante Mensajería Distribuida
 1. **Objetivo**: Hacer la arquitectura más robusta mediante la comunicación **asincrónica**, utilizando un sistema de mensajería que permita una arquitectura con "smart endpoint and dumb pipes".
 2. **Implementación**: Configurar los servicios de Envíos, Pagos e Infracciones para que reciban mensajes de Compras y respondan de manera asincrónica, permitiendo la disponibilidad de todos los módulos incluso si uno de ellos falla momentáneamente.
 3. **Desafíos**:
@@ -194,7 +265,7 @@ Seguridad:
 ---
 # Parte 5:
 
-## Evolución 4: Asincronía con Desdoblamiento de Mensajes y Coreografía Mediante Broker
+## Evolución 9: Asincronía con Desdoblamiento de Mensajes y Coreografía Mediante Broker
 1. **Objetivo**: Mejorar la administración de mensajes y centralizar su distribución mediante un **broker de mensajería** (ej. RabbitMQ o Kafka).
 2. **Implementación**: Configurar colas específicas para cada evento y establecer flujos coreografiados donde los servicios reaccionan ante eventos sin la necesidad de una orquestación central.
 3. **Desafíos**:
@@ -215,7 +286,7 @@ Seguridad:
 ---
 # Parte 6:
 
-## Evolución 5: Migración a ESB con Orquestación Mediante BPM/BPEL
+## Evolución 10: Migración a ESB con Orquestación Mediante BPM/BPEL
 1. **Objetivo**: Integrar un **Bus de Servicios Empresariales (ESB)** para centralizar y controlar el flujo de mensajes mediante orquestación.
 2. **Implementación**: Configurar un motor BPM o BPEL que gestione la orquestación de cada paso en la compra, permitiendo reglas de negocio avanzadas y un manejo centralizado de los servicios.
 3. **Desafíos**:
