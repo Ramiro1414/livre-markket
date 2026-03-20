@@ -142,7 +142,7 @@ Seguridad:
    - ¿Qué limitación tiene su implementación respecto a permisos por operación? (Ejemplo: ¿puede un servicio tener permiso de lectura pero no de escritura?)
    - Listar al menos 3 limitaciones concretas de su solución que motivarían buscar un mecanismo más robusto.
 
-## Evolución 5: eguridad — Tokens JWT (HS256)
+## Evolución 5: Seguridad — Tokens JWT (HS256)
 1. **Objetivo**: Reemplazar el mecanismo de autenticación de la Parte 3.3 por JSON Web Tokens (JWT) firmados con algoritmo HMAC-SHA256 (HS256), de manera que cada servicio genere tokens autocontenidos con información de identidad y tiempo de expiración.
 2. **Conceptos Clave**
    - **JWT (JSON Web Token):** Estándar (RFC 7519) que define un formato compacto y autocontenido para transmitir información entre partes como un objeto JSON firmado.
@@ -157,7 +157,7 @@ Seguridad:
    - Si el token es inválido, está expirado o no está presente, el servicio debe responder con el código HTTP apropiado.
    - El flujo de compra debe seguir funcionando sin modificar la lógica de negocio.
 > **Tip:** La librería `jsonwebtoken` de Node.js permite firmar con `jwt.sign()` y verificar con `jwt.verify()`. 
-### actividades propuestas
+### Actividades propuestas
 1. **Diseño**
 Antes de codificar, documentar brevemente:
    - ¿Dónde se almacena el secreto compartido para la firma HS256?
