@@ -44,7 +44,7 @@ class Compra {
   }
 
   cancelarInfraccionDetectada() {
-    this.compra.estado = 'pedido_cacelado';
+    this.compra.estado = 'pedido_cancelado';
     this.compra.motivo = 'tuvo Publicaciones';
     sleep(Math.floor(Math.random() * 1e3));
   }
@@ -85,7 +85,7 @@ class Compra {
   }
 
   solicitarMedioPago() {
-    this.estado = 'medio_pago_solicitado'
+    this.compra.estado = 'medio_pago_solicitado'
     this.compra.medioPago = Math.random() > 0.5 ? 'efectivo' : 'tarjeta';
     sleep(Math.floor(Math.random() * 1e3));
 
