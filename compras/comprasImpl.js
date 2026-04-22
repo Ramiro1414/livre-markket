@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const sleep = require('atomic-sleep')
+//const sleep = require('atomic-sleep')
 
 var compraId = 0;
 
@@ -21,64 +21,93 @@ class CompraWorkflow {
     this.compra = new Object();
   }
 
-  iniciarCompra(producto) {
+  async iniciarCompra(producto) {
 
     compraId++;
 
-    console.log('Arranca ',producto,'time: ',new Date().toISOString());
+    console.log('Arranca ', producto, 'time: ', new Date().toISOString());
 
     let compra = this.servicioCompras.seleccionarProducto(producto, compraId);
-    sleep(Math.floor(Math.random() * 1e3));
+    await sleep(Math.random() * 1000);
 
     compra = this.servicioPedidos.generarPedido(compra);
-    sleep(Math.floor(Math.random() * 1e3));
+    await sleep(Math.random() * 1000);
 
-    compra = this.servicioInfracciones.detectarInfracciones(compra);
-    sleep(Math.floor(Math.random() * 1e3));
+    const [
+      compraConInfracciones,
+      compraConReserva,
+      compraConEnvio,
+      compraConPago
+    ] = await Promise.all([
+
+      (async () => {
+        let c = this.servicioInfracciones.detectarInfracciones({ ...compra });
+        await sleep(Math.random() * 1000);
+        return c;
+      })(),
+
+      (async () => {
+        let c = this.servicioCompras.reservarProducto({ ...compra });
+        await sleep(Math.random() * 1000);
+        return c;
+      })(),
+
+      (async () => {
+        let c = this.servicioEnvios.solicitarFormaEnvio({ ...compra });
+        await sleep(Math.random() * 1000);
+        return c;
+      })(),
+
+      (async () => {
+        let c = this.servicioPagos.solicitarMedioPago({ ...compra });
+        await sleep(Math.random() * 1000);
+        return c;
+      })()
+
+    ]);
+
+    // merge de tareas paralelizadas
+    compra = {
+      ...compra,
+      ...compraConReserva,
+      ...compraConEnvio,
+      ...compraConPago,
+      ...compraConInfracciones
+    };
 
     if (compra.hasPublicacion) {
-      compra = this.servicioInfracciones.cancelarInfraccionDetectada(compra)
-      sleep(Math.floor(Math.random() * 1e3));
+      compra = this.servicioInfracciones.cancelarInfraccionDetectada(compra);
       this.compra = compra;
       return compra;
     }
 
-    // no hubo infracciones, reserva el producto
-    compra = this.servicioCompras.reservarProducto(compra);
-    sleep(Math.floor(Math.random() * 1e3));
-
-    compra = this.servicioEnvios.solicitarFormaEnvio(compra);
-    sleep(Math.floor(Math.random() * 1e3));
-    
-    compra = this.servicioEnvios.calcularCostoEnvio(compra);
-    sleep(Math.floor(Math.random() * 1e3));
-
     compra = this.servicioCompras.confirmarCompra(compra);
-    sleep(Math.floor(Math.random() * 1e3));
-
-    compra = this.servicioPagos.solicitarMedioPago(compra);
-    sleep(Math.floor(Math.random() * 1e3));
+    await sleep(Math.random() * 1000);
 
     compra = this.servicioPagos.pagarProducto(compra);
-    sleep(Math.floor(Math.random() * 1e3));
+    await sleep(Math.random() * 1000);
 
     if (compra.resultadoPago === 'rechazado') {
       compra = this.servicioPagos.cancelarPagoRechazado(compra);
-      sleep(Math.floor(Math.random() * 1e3));
       this.compra = compra;
       return compra;
     }
 
     compra = this.servicioPagos.confirmarPago(compra);
-    sleep(Math.floor(Math.random() * 1e3));
+    await sleep(Math.random() * 1000);
 
     compra = this.servicioEnvios.generarEnvio(compra);
-    sleep(Math.floor(Math.random() * 1e3));
+    await sleep(Math.random() * 1000);
 
     compra = this.servicioCompras.finalizarCompra(compra);
+
     this.compra = compra;
   }
 
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 module.exports = CompraWorkflow;

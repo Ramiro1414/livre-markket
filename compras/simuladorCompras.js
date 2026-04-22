@@ -16,7 +16,7 @@ function sleep(ms) {
 async function comprar(producto) {
   var compra = new CompraWorkflow();
   // simula la selección del producto a comprar desde la web init()
-  compra.iniciarCompra(producto);
+  await compra.iniciarCompra(producto);
 
   // finaliza simulación
   console.log('*************************************************************************');

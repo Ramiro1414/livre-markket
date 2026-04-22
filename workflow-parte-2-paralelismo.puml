@@ -17,16 +17,17 @@ fork again
   :Forma de pago seleccionada;
 fork again
   :Reservar producto;
+fork again
+  :Detectar infraccion;
 end fork
-:Detectar infraccion;
 if (Existe infracción) then (si)
-:Cancelar pedido;
-:Informar infraccion;
-:Cancelar reserva producto;
-end
-else (no)
+  :Cancelar pedido;
+  :Informar infraccion;
+  :Cancelar reserva producto;
+  end
+  else (no)
 
-endif
+  endif
 :Confirmar compra;
 :Autorizar pago;
 if (Pago) then (rechazado)
