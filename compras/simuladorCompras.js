@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var Compra = require('./comprasImpl');
+var CompraWorkflow = require('./comprasImpl');
 // simula la llegada de un nuevo mensaje encolado de compra
 
 comprar('producto1');
@@ -14,13 +14,13 @@ function sleep(ms) {
 }
 
 async function comprar(producto) {
-  var compra = new Compra();
+  var compra = new CompraWorkflow();
   // simula la selección del producto a comprar desde la web init()
-  compra.seleccionarProducto(producto);
+  compra.iniciarCompra(producto);
 
   // finaliza simulación
   console.log('*************************************************************************');
-  console.log('*** SIMULACIÓN FINALIZADA ',compra.compra.producto,'Time: ',new Date().toISOString(), ' ***');
+  console.log('*** SIMULACIÓN FINALIZADA ',producto,'Time: ',new Date().toISOString(), ' ***');
   console.log('*************************************************************************');
   console.log(JSON.stringify(compra.compra,null,3));
   console.log('\n\n');

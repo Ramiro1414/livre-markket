@@ -4,133 +4,83 @@ const sleep = require('atomic-sleep')
 
 var compraId = 0;
 
-class Compra {
+const ComprasService = require('./servicios/compras');
+const PedidosService = require('./servicios/pedidos');
+const InfraccionesService = require('./servicios/infracciones');
+const PagosService = require('./servicios/pagos');
+const EnviosService = require('./servicios/envios');
+
+class CompraWorkflow {
+
   constructor() {
+    this.servicioCompras = new ComprasService();
+    this.servicioPedidos = new PedidosService();
+    this.servicioInfracciones = new InfraccionesService();
+    this.servicioPagos = new PagosService();
+    this.servicioEnvios = new EnviosService();
     this.compra = new Object();
   }
 
-  seleccionarProducto(producto) {
-    console.log('Arranca ',producto,'time: ',new Date().toISOString());
-    
+  iniciarCompra(producto) {
+
     compraId++;
-    this.compra.compraId = compraId;
-    this.compra.producto = producto;
-    this.compra.estado = 'producto_seleccionado';
+
+    console.log('Arranca ',producto,'time: ',new Date().toISOString());
+
+    let compra = this.servicioCompras.seleccionarProducto(producto, compraId);
     sleep(Math.floor(Math.random() * 1e3));
 
-    this.generarPedido();
-  }
-
-
-  generarPedido() {
-    this.compra.estado = 'pedido_generado';
+    compra = this.servicioPedidos.generarPedido(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-    this.detectarInfracciones();
-  }
-
-  detectarInfracciones() {
-    this.compra.estado = 'detectando_infracciones';
-    this.compra.hasPublicacion = Math.random() > 0.7 ? true : false;
+    compra = this.servicioInfracciones.detectarInfracciones(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-    if (this.compra.hasPublicacion) {
-      this.cancelarInfraccionDetectada();
-      //compra.imprimirCompra();
-    } else {
-      // no hubo infracciones, reserva el producto
-      this.reservarProducto();
+    if (compra.hasPublicacion) {
+      compra = this.servicioInfracciones.cancelarInfraccionDetectada(compra)
+      sleep(Math.floor(Math.random() * 1e3));
+      this.compra = compra;
+      return compra;
     }
-  }
 
-  cancelarInfraccionDetectada() {
-    this.compra.estado = 'pedido_cancelado';
-    this.compra.motivo = 'tuvo Publicaciones';
-    sleep(Math.floor(Math.random() * 1e3));
-  }
-
-  reservarProducto() {
-    this.compra.estado = 'producto_reservado';
+    // no hubo infracciones, reserva el producto
+    compra = this.servicioCompras.reservarProducto(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-    this.solicitarFormaEnvio();
-  }
-
-  solicitarFormaEnvio() {
-    this.compra.estado = 'forma_envio_solicitada';
-    this.compra.formaDeEntrega = Math.random() > 0.5 ? 'retira' : 'correo';
+    compra = this.servicioEnvios.solicitarFormaEnvio(compra);
+    sleep(Math.floor(Math.random() * 1e3));
+    
+    compra = this.servicioEnvios.calcularCostoEnvio(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-    this.calcularCostoEnvio(this.compra.formaDeEntrega);
-  }
-
-  calcularCostoEnvio(entrega) {
-    this.compra.estado = 'envio_calculado';
-    if (entrega === 'correo')
-      this.compra.costo = Math.random() * 1e3;
-    else
-      this.compra.costo = 0;
-
+    compra = this.servicioCompras.confirmarCompra(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-    this.confirmarCompra();
-  }
-
-  confirmarCompra() {
-    this.compra.estado = 'compra_confirmada';
-    this.compra.compraConfirmada = true;
+    compra = this.servicioPagos.solicitarMedioPago(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-    this.solicitarMedioPago();
-  }
-
-  solicitarMedioPago() {
-    this.compra.estado = 'medio_pago_solicitado'
-    this.compra.medioPago = Math.random() > 0.5 ? 'efectivo' : 'tarjeta';
+    compra = this.servicioPagos.pagarProducto(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-    this.pagarProducto();
-
-  }
-
-  pagarProducto() {
-    this.compra.estado = 'pagando';
-    this.compra.resultadoPago = Math.random() > 0.3 ? 'autorizado' : 'rechazado';
-    sleep(Math.floor(Math.random() * 1e3));
-
-    if (this.compra.resultadoPago === 'rechazado') {
-      this.cancelarPagoRechazado();
-    } else {
-      this.confirmarPago();
+    if (compra.resultadoPago === 'rechazado') {
+      compra = this.servicioPagos.cancelarPagoRechazado(compra);
+      sleep(Math.floor(Math.random() * 1e3));
+      this.compra = compra;
+      return compra;
     }
-  }
 
-  cancelarPagoRechazado() {
-    this.compra.estado = 'compra_cancelada';
-    this.compra.motivo = 'Pago rechazado'
+    compra = this.servicioPagos.confirmarPago(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-  }
-
-  confirmarPago() {
-    this.compra.estado = 'pagado';
+    compra = this.servicioEnvios.generarEnvio(compra);
     sleep(Math.floor(Math.random() * 1e3));
 
-    this.generarEnvio();
+    compra = this.servicioCompras.finalizarCompra(compra);
+    this.compra = compra;
   }
 
-  generarEnvio() {
-    this.compra.estado = 'enviado';
-    sleep(Math.floor(Math.random() * 1e3));
-
-    this.finalizarCompra();
-  }
-
-  finalizarCompra() {
-    this.compra.estado = 'finalizada';
-  }
 }
 
-module.exports = Compra;
+module.exports = CompraWorkflow;
 
 

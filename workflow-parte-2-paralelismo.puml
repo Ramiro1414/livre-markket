@@ -1,0 +1,45 @@
+@startuml
+Start
+:Seleccionar producto;
+:Nuevo pedido;
+fork
+  :Solicitar forma de entrega;
+  :Seleccionar forma de entrega;
+  :Forma de entrega seleccionada;
+  if (¿Despacho?) then (envio currier)
+    :Calcular envío;
+  else (retira)
+    
+  endif
+fork again
+  :Solicitar medio de pago;
+  :Seleccionar forma de pago;
+  :Forma de pago seleccionada;
+fork again
+  :Reservar producto;
+end fork
+:Detectar infraccion;
+if (Existe infracción) then (si)
+:Cancelar pedido;
+:Informar infraccion;
+:Cancelar reserva producto;
+end
+else (no)
+
+endif
+:Confirmar compra;
+:Autorizar pago;
+if (Pago) then (rechazado)
+:Cancelar compra;
+:Cancelar reserva producto;
+end
+
+else (autorizado)
+
+endif
+:Enviar producto;
+:Compra confirmada y en proceso de envío;
+:Enviar producto;
+end
+
+@enduml
