@@ -75,8 +75,10 @@ class CompraWorkflow {
       ...compraConInfracciones
     };
 
+    // si hay infraccion, cancelo compra
     if (compra.hasPublicacion) {
       compra = this.servicioInfracciones.cancelarInfraccionDetectada(compra);
+      compra = this.servicioCompras.cancelarReservaProducto(compra);
       this.compra = compra;
       return compra;
     }
@@ -87,8 +89,10 @@ class CompraWorkflow {
     compra = this.servicioPagos.pagarProducto(compra);
     await sleep(Math.random() * 1000);
 
+    // si se rechaza el pago, cancelo compra
     if (compra.resultadoPago === 'rechazado') {
       compra = this.servicioPagos.cancelarPagoRechazado(compra);
+      compra = this.servicioCompras.cancelarReservaProducto(compra);
       this.compra = compra;
       return compra;
     }

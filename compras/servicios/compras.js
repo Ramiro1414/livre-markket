@@ -1,4 +1,5 @@
 class ComprasService {
+
   seleccionarProducto(producto, compraId) {
     let compra = new Object();
     compra.id = compraId;
@@ -10,6 +11,10 @@ class ComprasService {
   reservarProducto(compra) {
     compra.estado = 'producto_reservado';
     return compra
+  }
+
+  cancelarReservaProducto(compra) {
+    return compra;
   }
 
   confirmarCompra(compra) {
