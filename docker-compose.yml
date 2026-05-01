@@ -11,5 +11,23 @@ services:
     tty: true
     volumes:
       - ./compras:/home/compras
-    #command: node simuladorComprasCC
     command: sh
+    ports:
+      - "3000:3000"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: web
+    working_dir: /home/web
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./web:/home/web
+    command: sh
+    ports:
+      - "8080:3000"
+    depends_on:
+      - compras

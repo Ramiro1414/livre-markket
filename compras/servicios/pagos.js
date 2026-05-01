@@ -1,12 +1,12 @@
 class PagosService {
 
-    solicitarMedioPago(compra) {
-        compra.estado = 'medio_pago_solicitado'
-        compra.medioPago = Math.random() > 0.5 ? 'efectivo' : 'tarjeta';
+    seleccionarMedioPago(compra, medio_pago) {
+        compra.estado = 'medio_pago_seleccionado'
+        compra.medioPago = medio_pago
         return compra;
     }
 
-    pagarProducto(compra) {
+    autorizarPago(compra) {
         compra.estado = 'pagando';
         compra.resultadoPago = Math.random() > 0.3 ? 'autorizado' : 'rechazado';
         return compra;

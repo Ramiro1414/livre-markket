@@ -12,9 +12,16 @@ class EnviosService {
         return compra;
     }
 
+    seleccionarFormaEntrega(compra, forma_entrega) {
+        compra.forma_entrega = forma_entrega
+        compra.estado = 'forma_entrega_seleccionada'
+
+        return compra
+    }
+
     calcularCostoEnvio(compra) {
         compra.estado = 'envio_calculado';
-        if (compra.formaDeEntrega === 'correo')
+        if (compra.forma_entrega === 'correo')
             compra.costo = Math.random() * 1e3;
         else
             compra.costo = 0;

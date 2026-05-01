@@ -17,6 +17,11 @@ class ComprasService {
     return compra;
   }
 
+  cancelarPedido(compra) {
+    compra.estado = 'pedido_cancelado'
+    return compra
+  }
+
   confirmarCompra(compra) {
     compra.estado = 'compra_confirmada';
     compra.compraConfirmada = true;
