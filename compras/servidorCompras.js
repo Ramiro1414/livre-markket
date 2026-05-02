@@ -2,18 +2,10 @@ const express = require('express');
 const app = express();
 
 const ComprasService = require('./servicios/compras');
-const PedidosService = require('./servicios/pedidos');
-const InfraccionesService = require('./servicios/infracciones');
-const PagosService = require('./servicios/pagos');
-const EnviosService = require('./servicios/envios');
 
 app.use(express.json());
 
 const comprasService = new ComprasService();
-const pedidosService = new PedidosService();
-const infraccionesService = new InfraccionesService();
-const pagosService = new PagosService();
-const enviosService = new EnviosService();
 
 // "Base de datos" en memoria
 const compras = {};
@@ -27,7 +19,7 @@ app.get('/health', (req, res) => {
 // ==================================================
 //            Seleccionar producto
 // ==================================================
-app.post('/compras', (req, res) => {
+app.post('/compras', async (req, res) => {
   const { producto } = req.body;
 
   console.log(`Cliente selecciono producto: ${producto}`);
@@ -43,7 +35,13 @@ app.post('/compras', (req, res) => {
   console.log(`Nuevo pedido para compra con id: ${currentId}`);
   let nuevaCompra = comprasService.seleccionarProducto(producto, currentId++)
   console.log(`Reservando producto: ${producto} para compra: ${currentId-1}`);
-  nuevaCompra = comprasService.reservarProducto(nuevaCompra)
+  let response = await fetch('http://publicaciones:3000/publicaciones/productos/reservar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(nuevaCompra)
+  });
+
+  nuevaCompra = await response.json();
 
   // Guardar en memoria
   compras[nuevaCompra.id] = nuevaCompra;
@@ -57,7 +55,7 @@ app.post('/compras', (req, res) => {
 // ==================================================
 //            Seleccionar forma de entrega
 // ==================================================
-app.put('/compras/:id/envio', (req, res) => {
+app.put('/compras/:id/envio', async (req, res) => {
   const { id } = req.params;
   const { forma_entrega } = req.body;
 
@@ -84,10 +82,16 @@ app.put('/compras/:id/envio', (req, res) => {
 
   console.log(`Forma de entrega seleccionada: ${forma_entrega}`);
 
-  // Lógica de negocio usando services
-  let compraActualizada = enviosService.seleccionarFormaEntrega(compra, forma_entrega);
-  console.log(`Calculando envio para compra con id: ${currentId-1}`);
-  compraActualizada = enviosService.calcularCostoEnvio(compraActualizada);
+  let response = await fetch('http://envios:3000/envios/calcular', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      compra,
+      forma_entrega
+    })
+  });
+
+  let compraActualizada = await response.json();
 
   // Guardar cambios
   compras[id] = compraActualizada;
@@ -100,7 +104,7 @@ app.put('/compras/:id/envio', (req, res) => {
 // ==================================================
 //            Seleccionar medio de pago
 // ==================================================
-app.put('/compras/:id/pago', (req, res) => {
+app.put('/compras/:id/pago', async (req, res) => {
   const { id } = req.params;
   const { medio_pago } = req.body;
 
@@ -127,12 +131,28 @@ app.put('/compras/:id/pago', (req, res) => {
 
   console.log(`Medio de pago seleccionado: ${medio_pago}`);
 
-  // Lógica de negocio
-  let compraActualizada = pagosService.seleccionarMedioPago(compra, medio_pago);
+  let response = await fetch('http://pagos:3000/pagos/medio', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      compra,
+      medio_pago
+    })
+  });
+
+  let compraActualizada = await response.json();
 
   // Detectar infracicones
   console.log(`Detectando infracciones para compra con id: ${currentId-1}`);
-  compraActualizada = infraccionesService.detectarInfracciones(compraActualizada)
+  response = await fetch('http://infracciones:3000/infracciones/detectar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      compra: compraActualizada
+    })
+  });
+
+compraActualizada = await response.json();
 
   if (compraActualizada.hasPublicacion) {
     console.log(`Existe infraccion, cancelando pedido para compra con id: ${currentId-1}`);
@@ -150,9 +170,17 @@ app.put('/compras/:id/pago', (req, res) => {
   
   // Autorizar pago
   console.log(`Autorizando pago para compra con id: ${currentId-1}`);
-  compraActualizada = pagosService.autorizarPago(compraActualizada)
+  response = await fetch('http://pagos:3000/pagos/autorizar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      compra: compraActualizada
+    })
+  });
+
+  compraActualizada = await response.json();
   
-  if (compraActualizada.resultadoPago === 'rechazado') {
+  if (compraActualizada.resultado_pago === 'rechazado') {
     console.log(`Pago rechazado, cancelando pedido para compra con id: ${currentId-1}`);
     compraActualizada = comprasService.cancelarPedido(compraActualizada)
     console.log(`Cancelando reserva de producto`);
@@ -165,7 +193,15 @@ app.put('/compras/:id/pago', (req, res) => {
 
   // Enviar producto
   console.log(`Enviando producto para compra con id: ${currentId-1}`);
-  compraActualizada = enviosService.generarEnvio(compraActualizada)
+  response = await fetch('http://envios:3000/envios/enviar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      compra: compraActualizada
+    })
+  });
+
+  compraActualizada = await response.json();
 
   // Finalizar compra
   console.log(`Compra con id: ${currentId-1} confirmada, en proceso de envio y finalizada.`);
