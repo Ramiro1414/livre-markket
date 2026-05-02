@@ -15,6 +15,66 @@ services:
     ports:
       - "3000:3000"
 
+  envios:
+    build:
+      context: ./envios
+      dockerfile: Dockerfile
+    container_name: envios
+    working_dir: /home/envios
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./envios:/home/envios
+    command: sh
+    ports:
+      - "3001:3000"
+
+  infracciones:
+    build:
+      context: ./infracciones
+      dockerfile: Dockerfile
+    container_name: infracciones
+    working_dir: /home/infracciones
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./infracciones:/home/infracciones
+    command: sh
+    ports:
+      - "3002:3000"
+
+  pagos:
+    build:
+      context: ./pagos
+      dockerfile: Dockerfile
+    container_name: pagos
+    working_dir: /home/pagos
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./pagos:/home/pagos
+    command: sh
+    ports:
+      - "3003:3000"
+
+  publicaciones:
+    build:
+      context: ./publicaciones
+      dockerfile: Dockerfile
+    container_name: publicaciones
+    working_dir: /home/publicaciones
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./publicaciones:/home/publicaciones
+    command: sh
+    ports:
+      - "3004:3000"
+
   web:
     build:
       context: ./web
