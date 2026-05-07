@@ -1,0 +1,60 @@
+@startuml
+
+|Web|
+start
+:Seleccionar producto;
+|#AntiqueWhite|Compras|
+:Nuevo pedido;
+|Publicaciones|
+:Reservar producto;
+fork
+  |#AntiqueWhite|Envios|
+  :Solicitar forma de entrega;
+  |Web|
+  :Seleccionar forma de entrega;
+  |Envios|
+  :Forma de entrega seleccioanda;
+  if (¿Despacho?) then (Envio currier)
+      :Calcular envio;
+  else (retira)
+  endif
+fork again
+  |Pagos|
+  :Solicitar medio de pago;
+  |Web|
+  :Seleccionar medio de pago;
+  |Pagos|
+  :Forma de pago seleccionada;
+fork again
+  |#AntiqueWhite|Infracciones|
+  :Detectar infracciones;
+end fork
+|Infracciones|
+if (Existe infraccion) then (si)
+    |Compras|
+    :Cancelar pedido;
+    |Infracciones|
+    :Informar infraccion;
+    |Publicaciones|
+    :Cancelar reserva de producto;
+    end
+else (no)
+endif
+|Compras|
+:Confirmar compra;
+|Pagos|
+:Autorizar pago;
+if (Pago) then (rechazado)
+    |Compras|
+    :Cancelar compra;
+    |Publicaciones|
+    :Cancelar reserva de producto;
+    end
+else (autorizado)
+endif
+|Envios|
+:Enviar producto;
+|Compras|
+:Compra confirmada y en proceso de envio;
+stop
+@enduml
