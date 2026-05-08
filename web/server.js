@@ -65,7 +65,6 @@ app.post('/simular-compra', async (req, res) => {
 
     data = await response.json();
 
-    // Resultado final (puede ser FINALIZADA o RECHAZADA)
     return res.status(response.status).json({
       paso: 'final',
       compraId,

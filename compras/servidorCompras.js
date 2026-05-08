@@ -7,11 +7,9 @@ app.use(express.json());
 
 const comprasService = new ComprasService();
 
-// "Base de datos" en memoria
 const compras = {};
 let currentId = 1;
 
-// Endpoint de prueba
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -24,14 +22,12 @@ app.post('/compras', async (req, res) => {
 
   console.log(`Cliente selecciono producto: ${producto}`);
 
-  // Validación básica
   if (!producto) {
     return res.status(400).json({
       error: 'El campo "producto" es obligatorio'
     });
   }
 
-  // Crear nueva compra/nuevo pedido
   console.log(`Nuevo pedido para compra con id: ${currentId}`);
   let nuevaCompra = comprasService.seleccionarProducto(producto, currentId++)
   console.log(`Reservando producto: ${producto} para compra: ${currentId-1}`);
@@ -43,10 +39,8 @@ app.post('/compras', async (req, res) => {
 
   nuevaCompra = await response.json();
 
-  // Guardar en memoria
   compras[nuevaCompra.id] = nuevaCompra;
 
-  // Respuesta
   console.log(`Solicitando forma de entrega para compra: ${currentId-1}`);
   res.status(201).json(nuevaCompra);
 });
@@ -59,7 +53,6 @@ app.put('/compras/:id/envio', async (req, res) => {
   const { id } = req.params;
   const { forma_entrega } = req.body;
 
-  // Validar existencia
   let compra = compras[id];
   if (!compra) {
     return res.status(404).json({
@@ -67,7 +60,6 @@ app.put('/compras/:id/envio', async (req, res) => {
     });
   }
 
-  // Validar input
   if (!forma_entrega) {
     return res.status(400).json({
       error: 'El campo "forma_envio" es obligatorio'
@@ -93,10 +85,8 @@ app.put('/compras/:id/envio', async (req, res) => {
 
   let compraActualizada = await response.json();
 
-  // Guardar cambios
   compras[id] = compraActualizada;
 
-  // Respuesta
   console.log(`Solicitando medio de pago para compra: ${currentId-1}`);
   res.status(200).json(compraActualizada);
 });
@@ -108,7 +98,6 @@ app.put('/compras/:id/pago', async (req, res) => {
   const { id } = req.params;
   const { medio_pago } = req.body;
 
-  // Validar existencia
   let compra = compras[id];
   if (!compra) {
     return res.status(404).json({
@@ -116,7 +105,6 @@ app.put('/compras/:id/pago', async (req, res) => {
     });
   }
 
-  // Validar input
   if (!medio_pago) {
     return res.status(400).json({
       error: 'El campo "forma_pago" es obligatorio'
@@ -158,7 +146,14 @@ compraActualizada = await response.json();
     console.log(`Existe infraccion, cancelando pedido para compra con id: ${currentId-1}`);
     compraActualizada = comprasService.cancelarPedido(compraActualizada)
     console.log(`Cancelando reserva de producto`);
-    compraActualizada = comprasService.cancelarReservaProducto(compraActualizada)
+    response = await fetch('http://publicaciones:3000/publicaciones/productos/cancelar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(compraActualizada)
+    });
+    compraActualizada = await response.json();
     console.log(`Compra con id: ${currentId-1} fue cancelada por infraccion`);
     console.log(`===============================================`);
     compras[id] = compraActualizada;
@@ -184,7 +179,14 @@ compraActualizada = await response.json();
     console.log(`Pago rechazado, cancelando pedido para compra con id: ${currentId-1}`);
     compraActualizada = comprasService.cancelarPedido(compraActualizada)
     console.log(`Cancelando reserva de producto`);
-    compraActualizada = comprasService.cancelarReservaProducto(compraActualizada)
+    response = await fetch('http://publicaciones:3000/publicaciones/productos/cancelar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(compraActualizada)
+    });
+    compraActualizada = await response.json();
     console.log(`Compra con id: ${currentId-1} fue cancelada por pago rechazado`);
     console.log(`===============================================`);
     compras[id] = compraActualizada;
@@ -208,10 +210,8 @@ compraActualizada = await response.json();
   compraActualizada = comprasService.finalizarCompra(compraActualizada)
   console.log(`===============================================`);
 
-  // Guardar cambios
   compras[id] = compraActualizada;
 
-  // Respuesta
   res.status(200).json(compraActualizada);
 });
 
