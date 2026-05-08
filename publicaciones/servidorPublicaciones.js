@@ -1,36 +1,67 @@
 const express = require('express');
-const app = express();
+const EventEmitter = require('events');
 
+const app = express();
 app.use(express.json());
 
-// "Base de datos" en memoria
-const reservas_productos = {};
+// =========================================
+// Event Bus interno
+// =========================================
 
-// Endpoint de prueba
+const bus = new EventEmitter();
+
+// =========================================
+// Listener: nuevo_pedido_creado
+// =========================================
+
+bus.on('nuevo_pedido_creado', async (payload, res) => {
+
+  const { compra } = payload;
+
+  console.log(`Reservando producto para compra ${compra.id}`);
+
+  // Actualizar compra
+  compra.estado = 'producto_reservado';
+
+  compra.historial_estados.push('producto_reservado');
+
+  console.log(`Producto reservado para compra ${compra.id}`);
+
+  // Respuesta
+  return res.status(200).json(compra);
+});
+
+// =========================================
+// Endpoint único
+// =========================================
+
+app.post('/publicaciones', async (req, res) => {
+
+  const { evento } = req.body;
+
+  console.log(`Evento recibido: ${evento}`);
+
+  // Verificar listeners
+  if (bus.listenerCount(evento) === 0) {
+    return res.status(400).json({
+      error: `Evento no soportado: ${evento}`
+    });
+  }
+
+  // Emitir evento interno
+  bus.emit(evento, req.body, res);
+});
+
+// =========================================
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Reservar producto
-app.post('/publicaciones/productos/reservar', (req, res) => {
-  const compra = req.body;
-
-  // Validación básica
-  if (!compra) {
-    return res.status(400).json({
-      error: 'Compra no enviada'
-    });
-  }
-
-  // Lógica de negocio
-  console.log(`Reservando producto: ${compra.producto}, para la compra: ${compra.id}`);
-  compra.estado = 'producto_reservado';
-
-  // Respuesta
-  return res.json(compra);
-});
+// =========================================
 
 const PORT = 3000;
+
 app.listen(PORT, () => {
-  console.log(`Servidor de publicaciones escuchando en puerto ${PORT}`);
+  console.log(`Servidor Publicaciones escuchando en puerto ${PORT}`);
 });

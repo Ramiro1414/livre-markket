@@ -1,6 +1,7 @@
 const express = require('express');
 
 const app = express();
+
 app.use(express.json());
 
 const COMPRAS_URL = 'http://compras:3000';
@@ -10,71 +11,49 @@ app.get('/health', (req, res) => {
   res.json({ status: 'web ok' });
 });
 
-// Simulación de compra completa
+// =========================================
+// Seleccionar producto
+// =========================================
+
 app.post('/simular-compra', async (req, res) => {
-  const { producto, forma_entrega, medio_pago } = req.body;
+
+  const { producto } = req.body;
+
+  if (!producto) {
+    return res.status(400).json({
+      error: 'producto es obligatorio'
+    });
+  }
 
   try {
-    // ---------------------------
-    // 1. Crear compra
-    // ---------------------------
-    let response = await fetch(`${COMPRAS_URL}/compras`, {
+
+    console.log(`Cliente seleccionó producto: ${producto}`);
+
+    // =========================================
+    // Emitir evento a Compras
+    // =========================================
+
+    const response = await fetch(`${COMPRAS_URL}/compras`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ producto })
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'producto_seleccionado',
+        producto
+      })
     });
 
-    let data = await response.json();
+    const data = await response.json();
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        paso: 'crear_compra',
-        detalle: data
-      });
-    }
-
-    const compraId = data.id;
-
-    // ---------------------------
-    // 2. Seleccionar envío
-    // ---------------------------
-    response = await fetch(`${COMPRAS_URL}/compras/${compraId}/envio`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ forma_entrega })
-    });
-
-    data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        paso: 'envio',
-        compraId,
-        detalle: data
-      });
-    }
-
-    // ---------------------------
-    // 3. Seleccionar pago
-    // ---------------------------
-    response = await fetch(`${COMPRAS_URL}/compras/${compraId}/pago`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ medio_pago })
-    });
-
-    data = await response.json();
-
-    // Resultado final (puede ser FINALIZADA o RECHAZADA)
-    return res.status(response.status).json({
-      paso: 'final',
-      compraId,
-      resultado: data
-    });
+    return res.status(response.status).json(data);
 
   } catch (error) {
+
+    console.error(error);
+
     return res.status(500).json({
-      error: 'Error en la comunicación con el servidor de compras'
+      error: 'Error comunicando con Compras'
     });
   }
 });
