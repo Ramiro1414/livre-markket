@@ -14,21 +14,67 @@ const bus = new EventEmitter();
 // Listener: nuevo_pedido_creado
 // =========================================
 
-bus.on('nuevo_pedido_creado', async (payload, res) => {
+bus.on('nuevo_pedido_creado', async (payload) => {
 
   const { compra } = payload;
 
   console.log(`Reservando producto para compra ${compra.id}`);
 
-  // Actualizar compra
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
   compra.estado = 'producto_reservado';
 
   compra.historial_estados.push('producto_reservado');
 
   console.log(`Producto reservado para compra ${compra.id}`);
 
-  // Respuesta
-  return res.status(200).json(compra);
+  // ==========================================
+  // fan-out
+  // ==========================================
+
+  const body = JSON.stringify({
+    evento: 'producto_reservado',
+    compra
+  });
+
+  try {
+
+    await Promise.all([
+
+      fetch('http://envios:3000/envios', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body
+      }),
+
+      fetch('http://pagos:3000/pagos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body
+      }),
+
+      fetch('http://infracciones:3000/infracciones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body
+      })
+
+    ]);
+
+    console.log(`Fan-out completado para compra ${compra.id}`);
+
+  } catch (error) {
+
+    console.log(`Error durante fan-out para compra ${compra.id}`);
+  }
 });
 
 // =========================================

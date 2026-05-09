@@ -1,72 +1,123 @@
 const express = require('express');
+const EventEmitter = require('events');
+
 const app = express();
 
 app.use(express.json());
 
-// "Base de datos" en memoria
-const envios = {};
+const bus = new EventEmitter();
 
-// Endpoint de prueba
+// ==================================================
+// producto_reservado
+// ==================================================
+
+bus.on('producto_reservado', async (payload) => {
+
+  const { compra } = payload;
+
+  console.log(`Solicitud de forma de entrega para compra ${compra.id}`);
+
+  try {
+
+    await fetch('http://web:3000/web', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'forma_entrega_solicitada',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Web`);
+  }
+});
+
+// ==================================================
+// forma_entrega_seleccionada
+// ==================================================
+
+bus.on('forma_entrega_seleccionada', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Forma de entrega seleccionada para compra ${compra.id}: ${compra.forma_entrega}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  if (compra.forma_entrega === 'correo')
+    compra.costo = Math.floor(Math.random() * 1000);
+  else
+    compra.costo = 0;
+
+  compra.estado = 'envio_calculado';
+
+  compra.historial_estados.push('envio_calculado');
+
+  console.log(`Costo de envío calculado para compra ${compra.id}: ${compra.costo}`);
+
+  // ==========================================
+  // evento hacia Compras
+  // ==========================================
+
+  try {
+
+    await fetch('http://compras:3000/compras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'envio_calculado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Compras`);
+  }
+});
+
+// ==================================================
+// Endpoint único
+// ==================================================
+
+app.post('/envios', (req, res) => {
+
+  const { evento } = req.body;
+
+  console.log(`Evento recibido: ${evento}`);
+
+  if (bus.listenerCount(evento) === 0) {
+
+    return res.status(400).json({
+      error: `Evento no soportado: ${evento}`
+    });
+  }
+
+  bus.emit(evento, req.body);
+
+  return res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
+});
+
+// ==================================================
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Forma de entrega seleccionada y calcular envio
-app.post('/envios/calcular', (req, res) => {
-  const { compra, forma_entrega } = req.body;
-
-    console.log(`Compra ${compra.id} selecciono como forma de entrega: ${forma_entrega}`);
-
-  // Validaciones
-  if (!compra || !forma_entrega) {
-    return res.status(400).json({
-      error: 'Compra y forma_entrega son obligatorios'
-    });
-  }
-
-  // ---------------------------
-  // seleccionarFormaEntrega
-  // ---------------------------
-  compra.forma_entrega = forma_entrega;
-  compra.estado = 'forma_entrega_seleccionada';
-
-  // ---------------------------
-  // calcularCostoEnvio
-  // ---------------------------
-  
-  if (forma_entrega === 'correo') {
-    compra.costo = Math.random() * 1000;
-  } else {
-    compra.costo = 0;
-  }
-    
-  compra.estado = 'envio_calculado';
-  console.log(`Compra ${compra.id} tiene un costo de envio de: $ ${compra.costo}`);
-
-  // Respuesta
-  return res.json(compra);
-});
-
-app.post('/envios/enviar', (req, res) => {
-  const { compra } = req.body;
-
-  console.log(`Enviando compra ${compra.id}`);
-
-  // Validación
-  if (!compra) {
-    return res.status(400).json({
-      error: 'Compra es obligatoria'
-    });
-  }
-
-  // Lógica de negocio
-  compra.estado = 'enviado';
-
-  // Respuesta
-  return res.json(compra);
-});
+// ==================================================
 
 const PORT = 3000;
+
 app.listen(PORT, () => {
-  console.log(`Servidor de envios escuchando en puerto ${PORT}`);
+  console.log(`Servidor Envios escuchando en puerto ${PORT}`);
 });
