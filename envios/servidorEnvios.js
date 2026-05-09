@@ -7,6 +7,45 @@ app.use(express.json());
 
 const bus = new EventEmitter();
 
+bus.on('pago_autorizado', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Enviando producto para compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'enviando_producto';
+
+  compra.historial_estados.push('enviando_producto');
+
+  console.log(`Producto enviado para compra ${compra.id}`);
+
+  // ==========================================
+  // evento hacia Compras
+  // ==========================================
+
+  try {
+
+    await fetch('http://compras:3000/compras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'producto_enviado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Compras`);
+  }
+});
+
 // ==================================================
 // producto_reservado
 // ==================================================

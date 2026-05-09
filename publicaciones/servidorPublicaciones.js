@@ -11,6 +11,48 @@ app.use(express.json());
 const bus = new EventEmitter();
 
 // =========================================
+// Listener: pedido_cancelado
+// =========================================
+bus.on('pedido_cancelado', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Cancelando reserva de producto para compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'reserva_producto_cancelada';
+
+  compra.historial_estados.push('reserva_producto_cancelada');
+
+  console.log(`Reserva cancelada para compra ${compra.id}`);
+
+  // ==========================================
+  // evento hacia Compras
+  // ==========================================
+
+  try {
+
+    await fetch('http://compras:3000/compras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'reserva_producto_cancelada',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Compras`);
+  }
+});
+
+// =========================================
 // Listener: nuevo_pedido_creado
 // =========================================
 

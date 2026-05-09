@@ -8,6 +8,66 @@ app.use(express.json());
 const bus = new EventEmitter();
 
 // ==================================================
+// verificar_infraccion
+// ==================================================
+bus.on('verificar_infraccion', async (payload) => {
+
+  const { compra } = payload;
+
+  console.log(`Verificando infracción para compra ${compra.id}`);
+
+  if (compra.hasPublicacion) {
+
+    console.log(`Compra ${compra.id} posee infracción`);
+
+    try {
+
+      await fetch('http://compras:3000/compras', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          evento: 'existe_infraccion',
+          compra
+        })
+      });
+
+    } catch (error) {
+
+      console.log(`Error comunicando con Compras`);
+    }
+  }
+
+  // ==========================================
+  // no existe infracción
+  // ==========================================
+
+  else {
+
+    console.log(`Compra ${compra.id} sin infracción`);
+
+    try {
+
+      await fetch('http://compras:3000/compras', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          evento: 'no_existe_infraccion',
+          compra
+        })
+      });
+
+    } catch (error) {
+
+      console.log(`Error comunicando con Compras`);
+    }
+  }
+});
+
+// ==================================================
 // producto_reservado
 // ==================================================
 

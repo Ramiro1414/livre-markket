@@ -32,6 +32,176 @@ app.post('/compras', (req, res) => {
   });
 });
 
+bus.on('producto_enviado', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Finalizando compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'compra_confirmada_en_proceso_de_envio';
+
+  compra.historial_estados.push(
+    'compra_confirmada_en_proceso_de_envio'
+  );
+
+  console.log(`Compra ${compra.id} finalizada`);
+
+  console.log('===============================================');
+
+  console.log(JSON.stringify(compra, null, 2));
+});
+
+bus.on('pago_rechazado', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Pago rechazado para compra ${compra.id}`);
+
+  console.log(`Cancelando pedido para compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'pedido_cancelado';
+
+  compra.historial_estados.push('pedido_cancelado');
+
+  console.log(`Pedido cancelado para compra ${compra.id}`);
+
+  // ==========================================
+  // evento hacia Publicaciones
+  // ==========================================
+
+  try {
+
+    await fetch('http://publicaciones:3000/publicaciones', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'pedido_cancelado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Publicaciones`);
+  }
+});
+
+bus.on('reserva_producto_cancelada', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Finalizando cancelación de compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'compra_cancelada';
+
+  compra.historial_estados.push('compra_cancelada');
+
+  console.log(`Compra ${compra.id} cancelada`);
+
+  console.log('===============================================');
+
+  console.log(JSON.stringify(compra, null, 2));
+
+});
+
+// ==================================================
+// no_existe_infraccion
+// ==================================================
+bus.on('no_existe_infraccion', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Confirmando compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'compra_confirmada';
+
+  compra.historial_estados.push('compra_confirmada');
+
+  console.log(`Compra ${compra.id} confirmada`);
+
+  // ==========================================
+  // evento hacia Pagos
+  // ==========================================
+
+  try {
+
+    await fetch('http://pagos:3000/pagos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'compra_confirmada',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Pagos`);
+  }
+});
+
+// ==================================================
+// existe_infraccion
+// ==================================================
+bus.on('existe_infraccion', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Cancelando pedido para compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'pedido_cancelado';
+
+  compra.historial_estados.push('pedido_cancelado');
+
+  console.log(`Pedido cancelado para compra ${compra.id}`);
+
+  // ==========================================
+  // evento hacia Publicaciones
+  // ==========================================
+
+  try {
+
+    await fetch('http://publicaciones:3000/publicaciones', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'pedido_cancelado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Publicaciones`);
+  }
+});
+
 // Listeners de eventos
 bus.on('producto_seleccionado', async (payload) => {
 
@@ -94,11 +264,6 @@ bus.on('forma_pago_seleccionada', async (payload) => {
   if (fanInCompleto(compra)) {
 
     console.log(`Fan-in alcanzado para compra ${compra.id}`);
-
-    console.log('La compra es:');
-    console.log(JSON.stringify(compra, null, 2));
-
-    console.log('===================================================');
 
     await fetch('http://infracciones:3000/infracciones', {
       method: 'POST',

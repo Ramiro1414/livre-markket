@@ -7,6 +7,80 @@ app.use(express.json());
 
 const bus = new EventEmitter();
 
+// ==========================================
+// compra_confirmada
+// ==========================================
+bus.on('compra_confirmada', async (payload) => {
+
+  let { compra } = payload;
+
+  console.log(`Autorizando pago para compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'autorizando_pago';
+
+  compra.historial_estados.push('autorizando_pago');
+
+  compra.estado_pago =
+    Math.random() > 0.7 ? 'rechazado' : 'aprobado';
+
+  // ==========================================
+  // pago rechazado
+  // ==========================================
+
+  if (compra.estado_pago === 'rechazado') {
+
+    console.log(`Pago rechazado para compra ${compra.id}`);
+
+    try {
+
+      await fetch('http://compras:3000/compras', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          evento: 'pago_rechazado',
+          compra
+        })
+      });
+
+    } catch (error) {
+
+      console.log(`Error comunicando con Compras`);
+    }
+
+    return;
+  }
+
+  // ==========================================
+  // pago aprobado
+  // ==========================================
+
+  console.log(`Pago aprobado para compra ${compra.id}`);
+
+  try {
+
+    await fetch('http://envios:3000/envios', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'pago_autorizado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Envios`);
+  }
+});
+
 // ==================================================
 // producto_reservado
 // ==================================================
