@@ -28,13 +28,12 @@ fork again
 fork again
   |#AntiqueWhite|Infracciones|
   :Detectar infracciones;
+  |Compras|
 end fork
 |Infracciones|
 if (Existe infraccion) then (si)
     |Compras|
     :Cancelar pedido;
-    |Infracciones|
-    :Informar infraccion;
     |Publicaciones|
     :Cancelar reserva de producto;
     end
@@ -46,7 +45,7 @@ endif
 :Autorizar pago;
 if (Pago) then (rechazado)
     |Compras|
-    :Cancelar compra;
+    :Cancelar pedido;
     |Publicaciones|
     :Cancelar reserva de producto;
     end
@@ -56,5 +55,14 @@ endif
 :Enviar producto;
 |Compras|
 :Compra confirmada y en proceso de envio;
-stop
+split
+  |Compras|
+  stop
+split again
+  |Web|
+  stop
+split again
+  |Publicaciones|
+  stop
+endsplit
 @enduml
