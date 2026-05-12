@@ -7,6 +7,8 @@ app.use(express.json());
 
 const bus = new EventEmitter();
 
+const compras = {};
+
 // ==================================================
 // Helpers
 // ==================================================
@@ -17,6 +19,21 @@ function randomFormaEntrega() {
 
   return opciones[Math.floor(Math.random() * opciones.length)];
 }
+
+bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
+
+  const { compra } = payload;
+
+  console.log(`Guardando compra ${compra.id} en Web`);
+
+  // ==========================================
+  // guardar localmente
+  // ==========================================
+
+  compras[compra.id] = compra;
+
+  console.log(`Compra ${compra.id} almacenada en Web`);
+});
 
 // ==================================================
 // Listener: forma_entrega_solicitada

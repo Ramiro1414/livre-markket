@@ -48,11 +48,55 @@ bus.on('producto_enviado', async (payload) => {
     'compra_confirmada_en_proceso_de_envio'
   );
 
+  // ==========================================
+  // guardar localmente
+  // ==========================================
+
+  compras[compra.id] = compra;
+
+  console.log(`Compra ${compra.id} almacenada localmente`);
+
   console.log(`Compra ${compra.id} finalizada`);
 
   console.log('===============================================');
 
   console.log(JSON.stringify(compra, null, 2));
+
+  // ==========================================
+  // emitir evento final
+  // ==========================================
+
+  const eventoFinal = {
+    evento: 'compra_confirmada_en_proceso_de_envio',
+    compra
+  };
+
+  try {
+
+    await Promise.all([
+
+      fetch('http://web:3000/web', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eventoFinal)
+      }),
+
+      fetch('http://publicaciones:3000/publicaciones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eventoFinal)
+      })
+
+    ]);
+
+  } catch (error) {
+
+    console.log(`Error comunicando evento final`);
+  }
 });
 
 bus.on('pago_rechazado', async (payload) => {
