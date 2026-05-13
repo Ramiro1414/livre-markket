@@ -12,6 +12,21 @@ const bus = new EventEmitter();
 
 const compras = {};
 
+bus.on('compra_cancelada', async (payload) => {
+
+  const { compra } = payload;
+
+  console.log(`Guardando compra ${compra.id} en Publicaciones`);
+
+  // ==========================================
+  // guardar localmente cuando se cancela la compra
+  // ==========================================
+
+  compras[compra.id] = compra;
+
+  console.log(`Compra ${compra.id} almacenada en Publicaciones`);
+});
+
 bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
 
   const { compra } = payload;
@@ -19,7 +34,7 @@ bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
   console.log(`Guardando compra ${compra.id} en Publicaciones`);
 
   // ==========================================
-  // guardar localmente
+  // guardar localmente cuando la compra se confirmo y se envio
   // ==========================================
 
   compras[compra.id] = compra;

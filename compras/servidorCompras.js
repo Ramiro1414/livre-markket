@@ -154,11 +154,49 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
   compra.historial_estados.push('compra_cancelada');
 
+  compras[compra.id] = compra
+
   console.log(`Compra ${compra.id} cancelada`);
 
   console.log('===============================================');
 
   console.log(JSON.stringify(compra, null, 2));
+
+  // ==========================================
+  // emitir evento final
+  // ==========================================
+
+  const eventoFinal = {
+    evento: 'compra_cancelada',
+    compra
+  };
+
+  try {
+
+    await Promise.all([
+
+      fetch('http://web:3000/web', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eventoFinal)
+      }),
+
+      fetch('http://publicaciones:3000/publicaciones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eventoFinal)
+      })
+
+    ]);
+
+  } catch (error) {
+
+    console.log(`Error comunicando evento final`);
+  }
 
 });
 

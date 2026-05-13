@@ -20,6 +20,21 @@ function randomFormaEntrega() {
   return opciones[Math.floor(Math.random() * opciones.length)];
 }
 
+bus.on('compra_cancelada', async (payload) => {
+
+  const { compra } = payload;
+
+  console.log(`Guardando compra ${compra.id} en Web`);
+
+  // ==========================================
+  // guardar localmente cuando se cancela la compra
+  // ==========================================
+
+  compras[compra.id] = compra;
+
+  console.log(`Compra ${compra.id} almacenada en Web`);
+});
+
 bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
 
   const { compra } = payload;
@@ -27,7 +42,7 @@ bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
   console.log(`Guardando compra ${compra.id} en Web`);
 
   // ==========================================
-  // guardar localmente
+  // guardar localmente cuando se confirma y envia la compra
   // ==========================================
 
   compras[compra.id] = compra;

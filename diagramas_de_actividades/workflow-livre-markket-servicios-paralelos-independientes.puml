@@ -36,7 +36,18 @@ if (Existe infraccion) then (si)
     :Cancelar pedido;
     |Publicaciones|
     :Cancelar reserva de producto;
+    |Compras|
+    :Cancelar compra;
+    split
     end
+    split again
+    |Web|
+    end
+    split again
+    |Publicaciones|
+    end
+    endsplit
+
 else (no)
 endif
 |Compras|
@@ -48,7 +59,18 @@ if (Pago) then (rechazado)
     :Cancelar pedido;
     |Publicaciones|
     :Cancelar reserva de producto;
+    |Compras|
+    :Cancelar compra;
+    split
     end
+    split again
+    |Web|
+    end
+    split again
+    |Publicaciones|
+    end
+    endsplit
+
 else (autorizado)
 endif
 |Envios|
