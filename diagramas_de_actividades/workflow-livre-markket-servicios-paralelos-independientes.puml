@@ -30,7 +30,7 @@ fork again
   :Detectar infracciones;
   |Compras|
 end fork
-|Infracciones|
+|Compras|
 if (Existe infraccion) then (si)
     |Compras|
     :Cancelar pedido;

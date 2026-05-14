@@ -103,37 +103,7 @@ bus.on('pago_rechazado', async (payload) => {
 
   console.log(`Cancelando pedido para compra ${compra.id}`);
 
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
-  compra.estado = 'pedido_cancelado';
-
-  compra.historial_estados.push('pedido_cancelado');
-
-  console.log(`Pedido cancelado para compra ${compra.id}`);
-
-  // ==========================================
-  // evento hacia Publicaciones
-  // ==========================================
-
-  try {
-
-    await fetch('http://publicaciones:3000/publicaciones', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'pedido_cancelado',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Publicaciones`);
-  }
+  cancelar_compra(compra)
 });
 
 bus.on('reserva_producto_cancelada', async (payload) => {
