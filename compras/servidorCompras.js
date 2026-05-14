@@ -71,32 +71,28 @@ bus.on('producto_enviado', async (payload) => {
     compra
   };
 
-  try {
+  fetch('http://web:3000/web', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(eventoFinal)
+  }).catch(error => {
 
-    await Promise.all([
+    console.log(`Error comunicando con Web`);
+  });
 
-      fetch('http://web:3000/web', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(eventoFinal)
-      }),
+  fetch('http://publicaciones:3000/publicaciones', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(eventoFinal)
+  }).catch(error => {
 
-      fetch('http://publicaciones:3000/publicaciones', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(eventoFinal)
-      })
-
-    ]);
-
-  } catch (error) {
-
-    console.log(`Error comunicando evento final`);
-  }
+    console.log(`Error comunicando con Publicaciones`);
+  });
+  
 });
 
 bus.on('pago_rechazado', async (payload) => {
@@ -171,117 +167,28 @@ bus.on('reserva_producto_cancelada', async (payload) => {
     compra
   };
 
-  try {
+  fetch('http://web:3000/web', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(eventoFinal)
+  }).catch(error => {
 
-    await Promise.all([
+      console.log(`Error comunicando con Web`);
+  });
 
-      fetch('http://web:3000/web', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(eventoFinal)
-      }),
-
-      fetch('http://publicaciones:3000/publicaciones', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(eventoFinal)
-      })
-
-    ]);
-
-  } catch (error) {
-
-    console.log(`Error comunicando evento final`);
-  }
-
-});
-
-// ==================================================
-// no_existe_infraccion
-// ==================================================
-bus.on('no_existe_infraccion', async (payload) => {
-
-  let { compra } = payload;
-
-  console.log(`Confirmando compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
-  compra.estado = 'compra_confirmada';
-
-  compra.historial_estados.push('compra_confirmada');
-
-  console.log(`Compra ${compra.id} confirmada`);
-
-  // ==========================================
-  // evento hacia Pagos
-  // ==========================================
-
-  try {
-
-    await fetch('http://pagos:3000/pagos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'compra_confirmada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Pagos`);
-  }
-});
-
-// ==================================================
-// existe_infraccion
-// ==================================================
-bus.on('existe_infraccion', async (payload) => {
-
-  let { compra } = payload;
-
-  console.log(`Cancelando pedido para compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
-  compra.estado = 'pedido_cancelado';
-
-  compra.historial_estados.push('pedido_cancelado');
-
-  console.log(`Pedido cancelado para compra ${compra.id}`);
-
-  // ==========================================
-  // evento hacia Publicaciones
-  // ==========================================
-
-  try {
-
-    await fetch('http://publicaciones:3000/publicaciones', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'pedido_cancelado',
-        compra
-      })
-    });
-
-  } catch (error) {
+  fetch('http://publicaciones:3000/publicaciones', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(eventoFinal)
+  }).catch(error => {
 
     console.log(`Error comunicando con Publicaciones`);
-  }
+  });
+
 });
 
 // Listeners de eventos
@@ -324,16 +231,13 @@ bus.on('envio_calculado', async (payload) => {
 
     console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
-    await fetch('http://infracciones:3000/infracciones', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'verificar_infraccion',
-        compra
-      })
-    });
+    // si hay infraccion
+    if (compra.hasPublicacion) {
+      cancelar_compra(compra);
+    } else {
+      continuar_flujo(compra)
+    }
+    
   }
 });
 
@@ -347,16 +251,13 @@ bus.on('forma_pago_seleccionada', async (payload) => {
 
     console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
-    await fetch('http://infracciones:3000/infracciones', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'verificar_infraccion',
-        compra
-      })
-    });
+    // si hay infraccion
+    if (compra.hasPublicacion) {
+      cancelar_compra(compra);
+    } else {
+      continuar_flujo(compra)
+    }
+
   }
 });
 
@@ -370,21 +271,18 @@ bus.on('infraccion_detectada', async (payload) => {
 
     console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
-    await fetch('http://infracciones:3000/infracciones', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'verificar_infraccion',
-        compra
-      })
-    });
+    // si hay infraccion
+    if (compra.hasPublicacion) {
+      cancelar_compra(compra);
+    } else {
+      continuar_flujo(compra)
+    }
+
   }
 });
 
 
-// ======= funciones helpers de merge y verificar sincronizacion =======
+// ======= funciones helpers =======
 function mergearCompra(compraActualizada) {
 
   const compraExistente = compras[compraActualizada.id];
@@ -413,6 +311,81 @@ function fanInCompleto(compra) {
     historial.includes('forma_pago_seleccionada') &&
     historial.includes('infraccion_detectada')
   );
+}
+
+async function continuar_flujo(compra) {
+  console.log(`Confirmando compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'compra_confirmada';
+
+  compra.historial_estados.push('compra_confirmada');
+
+  console.log(`Compra ${compra.id} confirmada`);
+
+  // ==========================================
+  // evento hacia Pagos
+  // ==========================================
+
+  try {
+
+    await fetch('http://pagos:3000/pagos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'compra_confirmada',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Pagos`);
+  }
+
+}
+
+async function cancelar_compra(compra) {
+
+  console.log(`Cancelando pedido para compra ${compra.id}`);
+
+  // ==========================================
+  // lógica de negocio
+  // ==========================================
+
+  compra.estado = 'pedido_cancelado';
+
+  compra.historial_estados.push('pedido_cancelado');
+
+  console.log(`Pedido cancelado para compra ${compra.id}`);
+
+  // ==========================================
+  // evento hacia Publicaciones
+  // ==========================================
+
+  try {
+
+    await fetch('http://publicaciones:3000/publicaciones', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'pedido_cancelado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Publicaciones`);
+  }
+  
 }
 
 const PORT = 3000;

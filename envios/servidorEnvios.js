@@ -85,6 +85,10 @@ bus.on('forma_entrega_seleccionada', async (payload) => {
 
   console.log(`Forma de entrega seleccionada para compra ${compra.id}: ${compra.forma_entrega}`);
 
+  compra.estado = 'forma_entrega_seleccionada';
+
+  compra.historial_estados.push('forma_entrega_seleccionada');
+
   // ==========================================
   // lógica de negocio
   // ==========================================

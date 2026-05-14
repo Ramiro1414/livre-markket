@@ -116,15 +116,13 @@ bus.on('producto_reservado', async (payload) => {
 
 bus.on('forma_pago_seleccionada', async (payload) => {
 
-  let { compra, medio_pago } = payload;
+  let { compra } = payload;
 
   console.log(`Forma de pago seleccionada para compra ${compra.id}`);
 
   // ==========================================
   // lógica de negocio
   // ==========================================
-
-  compra.medio_pago = medio_pago;
 
   compra.estado = 'forma_pago_seleccionada';
 
