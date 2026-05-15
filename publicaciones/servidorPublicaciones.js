@@ -1,8 +1,17 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const express = require('express');
+const https = require('https');
+const fs = require('fs');
 const EventEmitter = require('events');
 
 const app = express();
 app.use(express.json());
+
+const options = {
+  key: fs.readFileSync('./certs/publicaciones.key'),
+  cert: fs.readFileSync('./certs/publicaciones.crt')
+};
 
 // =========================================
 // Event Bus interno
@@ -67,7 +76,7 @@ bus.on('pedido_cancelado', async (payload) => {
 
   try {
 
-    await fetch('http://compras:3000/compras', {
+    await fetch('https://compras:3000/compras', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -117,7 +126,7 @@ bus.on('nuevo_pedido_creado', (payload) => {
   // fan-out asincrónico
   // ==========================================
 
-  fetch('http://envios:3000/envios', {
+  fetch('https://envios:3000/envios', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -127,7 +136,7 @@ bus.on('nuevo_pedido_creado', (payload) => {
     console.log(`Error comunicando con Envios`);
   });
 
-  fetch('http://pagos:3000/pagos', {
+  fetch('https://pagos:3000/pagos', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -137,7 +146,7 @@ bus.on('nuevo_pedido_creado', (payload) => {
     console.log(`Error comunicando con Pagos`);
   });
 
-  fetch('http://infracciones:3000/infracciones', {
+  fetch('https://infracciones:3000/infracciones', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -180,7 +189,6 @@ app.get('/health', (req, res) => {
 // =========================================
 
 const PORT = 3000;
-
-app.listen(PORT, () => {
-  console.log(`Servidor Publicaciones escuchando en puerto ${PORT}`);
+https.createServer(options, app).listen(PORT, () => {
+  console.log(`Servidor de publicaciones HTTPS escuchando en puerto ${PORT}`);
 });

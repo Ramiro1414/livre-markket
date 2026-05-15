@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-const WEB_URL = 'http://web:3000';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+const WEB_URL = 'https://web:3000';
 
 comprar('producto1');
 comprar('producto2');

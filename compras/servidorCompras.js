@@ -1,4 +1,8 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const express = require('express');
+const https = require('https');
+const fs = require('fs');
 const app = express();
 
 const EventEmitter = require('events');
@@ -7,6 +11,11 @@ const bus = new EventEmitter();
 const ComprasService = require('./servicios/compras');
 
 app.use(express.json());
+
+const options = {
+  key: fs.readFileSync('./certs/compras.key'),
+  cert: fs.readFileSync('./certs/compras.crt')
+};
 
 const comprasService = new ComprasService();
 
@@ -71,7 +80,7 @@ bus.on('producto_enviado', async (payload) => {
     compra
   };
 
-  fetch('http://web:3000/web', {
+  fetch('https://web:3000/web', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -82,7 +91,7 @@ bus.on('producto_enviado', async (payload) => {
     console.log(`Error comunicando con Web`);
   });
 
-  fetch('http://publicaciones:3000/publicaciones', {
+  fetch('https://publicaciones:3000/publicaciones', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -137,7 +146,7 @@ bus.on('reserva_producto_cancelada', async (payload) => {
     compra
   };
 
-  fetch('http://web:3000/web', {
+  fetch('https://web:3000/web', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -148,7 +157,7 @@ bus.on('reserva_producto_cancelada', async (payload) => {
       console.log(`Error comunicando con Web`);
   });
 
-  fetch('http://publicaciones:3000/publicaciones', {
+  fetch('https://publicaciones:3000/publicaciones', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -178,7 +187,7 @@ bus.on('producto_seleccionado', async (payload) => {
   console.log(`Nuevo pedido generado`);
 
   // Emitir evento a Publicaciones
-  await fetch('http://publicaciones:3000/publicaciones', {
+  await fetch('https://publicaciones:3000/publicaciones', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -302,7 +311,7 @@ async function continuar_flujo(compra) {
 
   try {
 
-    await fetch('http://pagos:3000/pagos', {
+    await fetch('https://pagos:3000/pagos', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -340,7 +349,7 @@ async function cancelar_compra(compra) {
 
   try {
 
-    await fetch('http://publicaciones:3000/publicaciones', {
+    await fetch('https://publicaciones:3000/publicaciones', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -359,6 +368,6 @@ async function cancelar_compra(compra) {
 }
 
 const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor de compras escuchando en puerto ${PORT}`);
+https.createServer(options, app).listen(PORT, () => {
+  console.log(`Servidor de compras HTTPS escuchando en puerto ${PORT}`);
 });

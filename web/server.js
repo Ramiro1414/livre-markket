@@ -1,9 +1,18 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const express = require('express');
+const https = require('https');
+const fs = require('fs');
 const EventEmitter = require('events');
 
 const app = express();
 
 app.use(express.json());
+
+const options = {
+  key: fs.readFileSync('./certs/web.key'),
+  cert: fs.readFileSync('./certs/web.crt')
+};
 
 const bus = new EventEmitter();
 
@@ -66,7 +75,7 @@ bus.on('forma_entrega_solicitada', async (payload) => {
 
   try {
 
-    await fetch('http://envios:3000/envios', {
+    await fetch('https://envios:3000/envios', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -100,7 +109,7 @@ bus.on('forma_pago_solicitada', async (payload) => {
 
   try {
 
-    await fetch('http://pagos:3000/pagos', {
+    await fetch('https://pagos:3000/pagos', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -153,7 +162,7 @@ app.post('/simular-compra', async (req, res) => {
 
   try {
 
-    await fetch('http://compras:3000/compras', {
+    await fetch('https://compras:3000/compras', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -185,7 +194,6 @@ app.get('/health', (req, res) => {
 // ==================================================
 
 const PORT = 3000;
-
-app.listen(PORT, () => {
-  console.log(`Servidor Web escuchando en puerto ${PORT}`);
+https.createServer(options, app).listen(PORT, () => {
+  console.log(`Servidor web HTTPS escuchando en puerto ${PORT}`);
 });

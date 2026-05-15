@@ -1,9 +1,18 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const express = require('express');
+const https = require('https');
+const fs = require('fs');
 const EventEmitter = require('events');
 
 const app = express();
 
 app.use(express.json());
+
+const options = {
+  key: fs.readFileSync('./certs/pagos.key'),
+  cert: fs.readFileSync('./certs/pagos.crt')
+};
 
 const bus = new EventEmitter();
 
@@ -37,7 +46,7 @@ bus.on('compra_confirmada', async (payload) => {
 
     try {
 
-      await fetch('http://compras:3000/compras', {
+      await fetch('https://compras:3000/compras', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -64,7 +73,7 @@ bus.on('compra_confirmada', async (payload) => {
 
   try {
 
-    await fetch('http://envios:3000/envios', {
+    await fetch('https://envios:3000/envios', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -93,7 +102,7 @@ bus.on('producto_reservado', async (payload) => {
 
   try {
 
-    await fetch('http://web:3000/web', {
+    await fetch('https://web:3000/web', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -136,7 +145,7 @@ bus.on('forma_pago_seleccionada', async (payload) => {
 
   try {
 
-    await fetch('http://compras:3000/compras', {
+    await fetch('https://compras:3000/compras', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -186,7 +195,6 @@ app.get('/health', (req, res) => {
 // ==================================================
 
 const PORT = 3000;
-
-app.listen(PORT, () => {
-  console.log(`Servidor Pagos escuchando en puerto ${PORT}`);
+https.createServer(options, app).listen(PORT, () => {
+  console.log(`Servidor de pagos HTTPS escuchando en puerto ${PORT}`);
 });
