@@ -170,6 +170,11 @@ app.post('/pagos', (req, res) => {
 
   const { evento } = req.body;
 
+  // responder primero
+  res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
+
   console.log(`Evento recibido: ${evento}`);
 
   if (bus.listenerCount(evento) === 0) {
@@ -180,10 +185,6 @@ app.post('/pagos', (req, res) => {
   }
 
   bus.emit(evento, req.body);
-
-  return res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
 });
 
 // ==================================================

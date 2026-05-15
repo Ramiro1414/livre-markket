@@ -167,6 +167,11 @@ app.post('/publicaciones', async (req, res) => {
 
   const { evento } = req.body;
 
+  // responder primero
+  res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
+
   console.log(`Evento recibido: ${evento}`);
 
   // Verificar listeners

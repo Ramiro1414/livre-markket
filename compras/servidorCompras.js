@@ -28,17 +28,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Endpoint para eventos
 app.post('/compras', (req, res) => {
 
   const { evento } = req.body;
 
-  // Emitir evento interno
-  bus.emit(evento, req.body);
-
-  return res.status(200).json({
+  // responder primero
+  res.status(200).json({
     mensaje: 'Evento recibido'
   });
+
+  // procesar después
+  bus.emit(evento, req.body);
 });
 
 bus.on('producto_enviado', async (payload) => {
