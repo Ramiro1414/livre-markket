@@ -14,6 +14,19 @@ const options = {
   cert: fs.readFileSync('./certs/infracciones.crt')
 };
 
+const SERVICIOS_AUTORIZADOS = {
+  compras: '123456789',
+  pagos: '987654321',
+  envios: '555555555',
+  publicaciones: '111111111',
+  infracciones: '222222222',
+  web: '333333333'
+};
+
+// credenciales
+const nombre = 'infracciones'
+const password = '222222222'
+
 const bus = new EventEmitter();
 
 // ==================================================
@@ -55,7 +68,9 @@ bus.on('producto_reservado', async (payload) => {
       },
       body: JSON.stringify({
         evento: 'infraccion_detectada',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 
@@ -71,14 +86,45 @@ bus.on('producto_reservado', async (payload) => {
 
 app.post('/infracciones', (req, res) => {
 
-  const { evento } = req.body;
-
-  // responder primero
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
+  const { evento, nombre, password } = req.body;
 
   console.log(`Evento recibido: ${evento}`);
+
+  // ==========================================
+  // credenciales ausentes
+  // ==========================================
+
+  if (!nombre || !password) {
+
+    return res.status(400).json({
+      error: 'Credenciales requeridas'
+    });
+
+  }
+
+  // ==========================================
+  // servicio inexistente
+  // ==========================================
+
+  if (!SERVICIOS_AUTORIZADOS[nombre]) {
+
+    return res.status(401).json({
+      error: 'Servicio no autorizado'
+    });
+
+  }
+
+  // ==========================================
+  // password inválida
+  // ==========================================
+
+  if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
+
+    return res.status(401).json({
+      error: 'Credenciales inválidas'
+    });
+
+  }
 
   if (bus.listenerCount(evento) === 0) {
 
@@ -86,6 +132,11 @@ app.post('/infracciones', (req, res) => {
       error: `Evento no soportado: ${evento}`
     });
   }
+
+  // responder primero
+  res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
 
   bus.emit(evento, req.body);
 });

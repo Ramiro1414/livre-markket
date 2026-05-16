@@ -8,8 +8,6 @@ const app = express();
 const EventEmitter = require('events');
 const bus = new EventEmitter();
 
-const ComprasService = require('./servicios/compras');
-
 app.use(express.json());
 
 const options = {
@@ -17,7 +15,18 @@ const options = {
   cert: fs.readFileSync('./certs/compras.crt')
 };
 
-const comprasService = new ComprasService();
+const SERVICIOS_AUTORIZADOS = {
+  compras: '123456789',
+  pagos: '987654321',
+  envios: '555555555',
+  publicaciones: '111111111',
+  infracciones: '222222222',
+  web: '333333333'
+};
+
+// credenciales
+const nombre = 'compras'
+const password = '123456789'
 
 // "Base de datos" en memoria
 const compras = {};
@@ -30,14 +39,48 @@ app.get('/health', (req, res) => {
 
 app.post('/compras', (req, res) => {
 
-  const { evento } = req.body;
+  const { evento, nombre, password } = req.body;
 
-  // responder primero
+  // ==========================================
+  // credenciales ausentes
+  // ==========================================
+
+  if (!nombre || !password) {
+
+    return res.status(400).json({
+      error: 'Credenciales requeridas'
+    });
+
+  }
+
+  // ==========================================
+  // servicio inexistente
+  // ==========================================
+
+  if (!SERVICIOS_AUTORIZADOS[nombre]) {
+
+    return res.status(401).json({
+      error: 'Servicio no autorizado'
+    });
+
+  }
+
+  // ==========================================
+  // password inválida
+  // ==========================================
+
+  if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
+
+    return res.status(401).json({
+      error: 'Credenciales inválidas'
+    });
+
+  }
+
   res.status(200).json({
     mensaje: 'Evento recibido'
   });
 
-  // procesar después
   bus.emit(evento, req.body);
 });
 
@@ -77,7 +120,9 @@ bus.on('producto_enviado', async (payload) => {
 
   const eventoFinal = {
     evento: 'compra_confirmada_en_proceso_de_envio',
-    compra
+    compra,
+    nombre: nombre,
+    password: password
   };
 
   fetch('https://web:3000/web', {
@@ -143,7 +188,9 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
   const eventoFinal = {
     evento: 'compra_cancelada',
-    compra
+    compra,
+    nombre: nombre,
+    password: password
   };
 
   fetch('https://web:3000/web', {
@@ -194,7 +241,9 @@ bus.on('producto_seleccionado', async (payload) => {
     },
     body: JSON.stringify({
       evento: 'nuevo_pedido_creado',
-      compra
+      compra,
+      nombre: nombre,
+      password: password
     })
   });
 
@@ -318,7 +367,9 @@ async function continuar_flujo(compra) {
       },
       body: JSON.stringify({
         evento: 'compra_confirmada',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 
@@ -356,7 +407,9 @@ async function cancelar_compra(compra) {
       },
       body: JSON.stringify({
         evento: 'pedido_cancelado',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 

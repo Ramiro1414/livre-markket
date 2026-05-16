@@ -14,6 +14,19 @@ const options = {
   cert: fs.readFileSync('./certs/envios.crt')
 };
 
+const SERVICIOS_AUTORIZADOS = {
+  compras: '123456789',
+  pagos: '987654321',
+  envios: '555555555',
+  publicaciones: '111111111',
+  infracciones: '222222222',
+  web: '333333333'
+};
+
+// credenciales
+const nombre = 'envios'
+const password = '555555555'
+
 const bus = new EventEmitter();
 
 bus.on('pago_autorizado', async (payload) => {
@@ -45,7 +58,9 @@ bus.on('pago_autorizado', async (payload) => {
       },
       body: JSON.stringify({
         evento: 'producto_enviado',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 
@@ -74,7 +89,9 @@ bus.on('producto_reservado', async (payload) => {
       },
       body: JSON.stringify({
         evento: 'forma_entrega_solicitada',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 
@@ -126,7 +143,9 @@ bus.on('forma_entrega_seleccionada', async (payload) => {
       },
       body: JSON.stringify({
         evento: 'envio_calculado',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 
@@ -142,12 +161,43 @@ bus.on('forma_entrega_seleccionada', async (payload) => {
 
 app.post('/envios', (req, res) => {
 
-  const { evento } = req.body;
+  const { evento, nombre, password } = req.body;
 
-  // responder primero
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
+  // ==========================================
+  // credenciales ausentes
+  // ==========================================
+
+  if (!nombre || !password) {
+
+    return res.status(400).json({
+      error: 'Credenciales requeridas'
+    });
+
+  }
+
+  // ==========================================
+  // servicio inexistente
+  // ==========================================
+
+  if (!SERVICIOS_AUTORIZADOS[nombre]) {
+
+    return res.status(401).json({
+      error: 'Servicio no autorizado'
+    });
+
+  }
+
+  // ==========================================
+  // password inválida
+  // ==========================================
+
+  if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
+
+    return res.status(401).json({
+      error: 'Credenciales inválidas'
+    });
+
+  }
 
   console.log(`Evento recibido: ${evento}`);
 
@@ -157,6 +207,11 @@ app.post('/envios', (req, res) => {
       error: `Evento no soportado: ${evento}`
     });
   }
+
+  // responder primero
+  res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
 
   bus.emit(evento, req.body);
 });

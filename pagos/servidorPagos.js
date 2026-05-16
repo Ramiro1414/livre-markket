@@ -14,6 +14,19 @@ const options = {
   cert: fs.readFileSync('./certs/pagos.crt')
 };
 
+const SERVICIOS_AUTORIZADOS = {
+  compras: '123456789',
+  pagos: '987654321',
+  envios: '555555555',
+  publicaciones: '111111111',
+  infracciones: '222222222',
+  web: '333333333'
+};
+
+// credenciales
+const nombre = 'pagos'
+const password = '987654321'
+
 const bus = new EventEmitter();
 
 // ==========================================
@@ -53,7 +66,9 @@ bus.on('compra_confirmada', async (payload) => {
         },
         body: JSON.stringify({
           evento: 'pago_rechazado',
-          compra
+          compra,
+          nombre: nombre,
+          password: password
         })
       });
 
@@ -80,7 +95,9 @@ bus.on('compra_confirmada', async (payload) => {
       },
       body: JSON.stringify({
         evento: 'pago_autorizado',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 
@@ -109,7 +126,9 @@ bus.on('producto_reservado', async (payload) => {
       },
       body: JSON.stringify({
         evento: 'forma_pago_solicitada',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 
@@ -152,7 +171,9 @@ bus.on('forma_pago_seleccionada', async (payload) => {
       },
       body: JSON.stringify({
         evento: 'forma_pago_seleccionada',
-        compra
+        compra,
+        nombre: nombre,
+        password: password
       })
     });
 
@@ -168,14 +189,45 @@ bus.on('forma_pago_seleccionada', async (payload) => {
 
 app.post('/pagos', (req, res) => {
 
-  const { evento } = req.body;
-
-  // responder primero
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
+  const { evento, nombre, password } = req.body;
 
   console.log(`Evento recibido: ${evento}`);
+
+  // ==========================================
+  // credenciales ausentes
+  // ==========================================
+
+  if (!nombre || !password) {
+
+    return res.status(400).json({
+      error: 'Credenciales requeridas'
+    });
+
+  }
+
+  // ==========================================
+  // servicio inexistente
+  // ==========================================
+
+  if (!SERVICIOS_AUTORIZADOS[nombre]) {
+
+    return res.status(401).json({
+      error: 'Servicio no autorizado'
+    });
+
+  }
+
+  // ==========================================
+  // password inválida
+  // ==========================================
+
+  if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
+
+    return res.status(401).json({
+      error: 'Credenciales inválidas'
+    });
+
+  }
 
   if (bus.listenerCount(evento) === 0) {
 
@@ -183,6 +235,11 @@ app.post('/pagos', (req, res) => {
       error: `Evento no soportado: ${evento}`
     });
   }
+
+  // responder primero
+  res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
 
   bus.emit(evento, req.body);
 });
