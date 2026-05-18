@@ -4,11 +4,10 @@ const express = require('express');
 const https = require('https');
 const fs = require('fs');
 const app = express();
+const jwt = require('jsonwebtoken');
 
 const EventEmitter = require('events');
 const bus = new EventEmitter();
-
-const ComprasService = require('./servicios/compras');
 
 app.use(express.json());
 
@@ -17,7 +16,8 @@ const options = {
   cert: fs.readFileSync('./certs/compras.crt')
 };
 
-const comprasService = new ComprasService();
+const JWT_SECRET = process.env.JWT_SECRET;
+const SERVICE_NAME = 'compras';
 
 // "Base de datos" en memoria
 const compras = {};
@@ -30,15 +30,66 @@ app.get('/health', (req, res) => {
 
 app.post('/compras', (req, res) => {
 
-  const { evento } = req.body;
+  const authHeader = req.headers.authorization;
+  
+  // token inexistente
+  if (!authHeader) { 
 
-  // responder primero
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
+    return res.status(401).json({
+      error: 'Token no enviado'
+    });
 
-  // procesar después
-  bus.emit(evento, req.body);
+  }
+
+  // formato bearer
+  const token = authHeader.split(' ')[1];
+
+  if (!token) {
+
+    return res.status(401).json({
+      error: 'Token inválido'
+    });
+
+  }
+
+  try {
+
+    // verifico token
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    console.log(`Token válido emitido por: ${decoded.iss}`);
+
+    const { evento } = req.body;
+
+    if (bus.listenerCount(evento) === 0) {
+      return res.status(400).json({
+        error: `Evento no soportado: ${evento}`
+        });
+    }
+
+    res.status(200).json({
+      mensaje: 'Evento recibido'
+    });
+
+    bus.emit(evento, req.body);
+
+  } catch (error) {
+
+    // token expirado
+    if (error.name === 'TokenExpiredError') {
+
+      return res.status(401).json({
+        error: 'Token expirado'
+      });
+
+    }
+
+    // token invalido
+    return res.status(401).json({
+      error: 'Token inválido'
+    });
+
+  }
 });
 
 bus.on('producto_enviado', async (payload) => {
@@ -80,10 +131,13 @@ bus.on('producto_enviado', async (payload) => {
     compra
   };
 
+  const token = generarToken(SERVICE_NAME);
+
   fetch('https://web:3000/web', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify(eventoFinal)
   }).catch(error => {
@@ -94,7 +148,8 @@ bus.on('producto_enviado', async (payload) => {
   fetch('https://publicaciones:3000/publicaciones', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify(eventoFinal)
   }).catch(error => {
@@ -146,10 +201,13 @@ bus.on('reserva_producto_cancelada', async (payload) => {
     compra
   };
 
+  const token = generarToken(SERVICE_NAME);
+
   fetch('https://web:3000/web', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify(eventoFinal)
   }).catch(error => {
@@ -160,7 +218,8 @@ bus.on('reserva_producto_cancelada', async (payload) => {
   fetch('https://publicaciones:3000/publicaciones', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify(eventoFinal)
   }).catch(error => {
@@ -186,11 +245,14 @@ bus.on('producto_seleccionado', async (payload) => {
 
   console.log(`Nuevo pedido generado`);
 
+  const token = generarToken(SERVICE_NAME);
+
   // Emitir evento a Publicaciones
   await fetch('https://publicaciones:3000/publicaciones', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
       evento: 'nuevo_pedido_creado',
@@ -309,12 +371,15 @@ async function continuar_flujo(compra) {
   // evento hacia Pagos
   // ==========================================
 
+  const token = generarToken(SERVICE_NAME);
+
   try {
 
     await fetch('https://pagos:3000/pagos', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         evento: 'compra_confirmada',
@@ -347,12 +412,15 @@ async function cancelar_compra(compra) {
   // evento hacia Publicaciones
   // ==========================================
 
+  const token = generarToken(SERVICE_NAME);
+
   try {
 
     await fetch('https://publicaciones:3000/publicaciones', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         evento: 'pedido_cancelado',
@@ -367,7 +435,17 @@ async function cancelar_compra(compra) {
   
 }
 
+function generarToken(servicio) {
+  return jwt.sign(
+    { iss: servicio },
+    JWT_SECRET,
+    { expiresIn: '60s' },
+    { algorithm: 'HS256' }
+  );
+}
+
 const PORT = 3000;
 https.createServer(options, app).listen(PORT, () => {
   console.log(`Servidor de compras HTTPS escuchando en puerto ${PORT}`);
+  console.log(`JWT_SECRET: ${JWT_SECRET}`);
 });

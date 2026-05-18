@@ -4,6 +4,7 @@ const express = require('express');
 const https = require('https');
 const fs = require('fs');
 const EventEmitter = require('events');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
@@ -13,6 +14,9 @@ const options = {
   key: fs.readFileSync('./certs/web.key'),
   cert: fs.readFileSync('./certs/web.crt')
 };
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const SERVICE_NAME = 'web';
 
 const bus = new EventEmitter();
 
@@ -73,12 +77,15 @@ bus.on('forma_entrega_solicitada', async (payload) => {
 
   console.log(`Forma seleccionada: ${compra.forma_entrega}`);
 
+  const token = generarToken(SERVICE_NAME);
+
   try {
 
     await fetch('https://envios:3000/envios', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         evento: 'forma_entrega_seleccionada',
@@ -107,12 +114,15 @@ bus.on('forma_pago_solicitada', async (payload) => {
 
   console.log(`Medio de pago seleccionado: ${compra.medio_pago}`);
 
+  const token = generarToken(SERVICE_NAME);
+
   try {
 
     await fetch('https://pagos:3000/pagos', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         evento: 'forma_pago_seleccionada',
@@ -132,23 +142,67 @@ bus.on('forma_pago_solicitada', async (payload) => {
 
 app.post('/web', (req, res) => {
 
-  const { evento } = req.body;
+  const authHeader = req.headers.authorization;
+    
+    // token inexistente
+    if (!authHeader) { 
+  
+      return res.status(401).json({
+        error: 'Token no enviado'
+      });
+  
+    }
+  
+    // formato bearer
+    const token = authHeader.split(' ')[1];
+  
+    if (!token) {
+  
+      return res.status(401).json({
+        error: 'Token inválido'
+      });
+  
+    }
+  
+    try {
+  
+      // verifico token
+      const decoded = jwt.verify(token, JWT_SECRET);
+  
+      console.log(`Token válido emitido por: ${decoded.iss}`);
+  
+      const { evento } = req.body;
+  
+      if (bus.listenerCount(evento) === 0) {
+        return res.status(400).json({
+          error: `Evento no soportado: ${evento}`
+          });
+      }
+  
+      res.status(200).json({
+        mensaje: 'Evento recibido'
+      });
+  
+      bus.emit(evento, req.body);
+  
+    } catch (error) {
+  
+      // token expirado
+      if (error.name === 'TokenExpiredError') {
+  
+        return res.status(401).json({
+          error: 'Token expirado'
+        });
+  
+      }
+  
+      // token invalido
+      return res.status(401).json({
+        error: 'Token inválido'
+      });
+  
+    }
 
-  // responder primero
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
-
-  console.log(`Evento recibido: ${evento}`);
-
-  if (bus.listenerCount(evento) === 0) {
-
-    return res.status(400).json({
-      error: `Evento no soportado: ${evento}`
-    });
-  }
-
-  bus.emit(evento, req.body);
 });
 
 // ==================================================
@@ -161,12 +215,15 @@ app.post('/simular-compra', async (req, res) => {
 
   console.log(`Cliente seleccionó producto: ${producto}`);
 
+  const token = generarToken(SERVICE_NAME);
+
   try {
 
     await fetch('https://compras:3000/compras', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         evento: 'producto_seleccionado',
@@ -193,6 +250,15 @@ app.get('/health', (req, res) => {
 });
 
 // ==================================================
+
+function generarToken(servicio) {
+  return jwt.sign(
+    { iss: servicio },
+    JWT_SECRET,
+    { expiresIn: '60s' },
+    { algorithm: 'HS256' }
+  );
+}
 
 const PORT = 3000;
 https.createServer(options, app).listen(PORT, () => {

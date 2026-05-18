@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
+const jwt = require('jsonwebtoken');
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const WEB_URL = 'https://web:3000';
+const JWT_SECRET = process.env.JWT_SECRET;
+const SERVICE_NAME = 'simulador_compras';
 
 comprar('producto1');
 comprar('producto2');
@@ -14,6 +18,8 @@ async function comprar(producto) {
 
   try {
 
+    const token = generarToken("SERVICE_NAME");
+
     console.log('====================================================');
     console.log(`Iniciando compra de ${producto}`);
     console.log('====================================================');
@@ -21,7 +27,8 @@ async function comprar(producto) {
     const response = await fetch(`${WEB_URL}/simular-compra`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
         producto
@@ -43,4 +50,13 @@ async function comprar(producto) {
 
     console.error(error);
   }
+}
+
+function generarToken(servicio) {
+  return jwt.sign(
+    { iss: servicio },
+    JWT_SECRET,
+    { expiresIn: '60s' },
+    { algorithm: 'HS256' }
+  );
 }
