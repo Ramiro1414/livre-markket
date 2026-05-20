@@ -5,6 +5,7 @@ const https = require('https');
 const fs = require('fs');
 const EventEmitter = require('events');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 
 const app = express();
 
@@ -13,6 +14,44 @@ app.use(express.json());
 const options = {
   key: fs.readFileSync('./certs/pagos.key'),
   cert: fs.readFileSync('./certs/pagos.crt')
+};
+
+const PRIVATE_KEY = fs.readFileSync(
+  path.join(__dirname, 'keys/private.key'),
+  'utf8'
+);
+
+const PUBLIC_KEYS = {
+
+  web: fs.readFileSync(
+    path.join(__dirname, 'keys/web.public.key'),
+    'utf8'
+  ),
+
+  pagos: fs.readFileSync(
+    path.join(__dirname, 'keys/pagos.public.key'),
+    'utf8'
+  ),
+
+  envios: fs.readFileSync(
+    path.join(__dirname, 'keys/envios.public.key'),
+    'utf8'
+  ),
+
+  publicaciones: fs.readFileSync(
+    path.join(__dirname, 'keys/publicaciones.public.key'),
+    'utf8'
+  ),
+
+  infracciones: fs.readFileSync(
+    path.join(__dirname, 'keys/infracciones.public.key'),
+    'utf8'
+  ),
+
+  compras: fs.readFileSync(
+    path.join(__dirname, 'keys/compras.public.key'),
+    'utf8'
+  )
 };
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -208,11 +247,32 @@ app.post('/pagos', (req, res) => {
   
     try {
   
-      // verifico token
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.decode(token);
+      
+      const publicKey = PUBLIC_KEYS[decoded.iss];
   
-      console.log(`Token válido emitido por: ${decoded.iss}`);
+      // verifico si existe clave publica del emisor
+      if (!publicKey) {
   
+        return res.status(401).json({
+          error: 'Emisor desconocido'
+        });
+  
+      }
+  
+      // verifico que el token este bien formado
+      if (!decoded || !decoded.iss) {
+  
+        return res.status(401).json({
+          error: 'Token malformado'
+        });
+  
+      }
+  
+      jwt.verify(token, publicKey, {
+        algorithms: ['RS256']
+      });
+
       const { evento } = req.body;
   
       if (bus.listenerCount(evento) === 0) {
@@ -256,11 +316,19 @@ app.get('/health', (req, res) => {
 // ==================================================
 
 function generarToken(servicio) {
+
   return jwt.sign(
-    { iss: servicio },
-    JWT_SECRET,
-    { expiresIn: '60s' },
-    { algorithm: 'HS256' }
+
+    {
+      iss: servicio
+    },
+
+    PRIVATE_KEY,
+
+    {
+      algorithm: 'RS256',
+      expiresIn: '60s'
+    }
   );
 }
 
