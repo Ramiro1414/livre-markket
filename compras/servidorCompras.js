@@ -98,7 +98,7 @@ app.post('/compras', (req, res) => {
 
     // verifico si existe clave publica del emisor
     if (!publicKey) {
-
+      console.log(`Emisor desconocido: ${decoded.iss}`);
       return res.status(401).json({
         error: 'Emisor desconocido'
       });
@@ -107,7 +107,7 @@ app.post('/compras', (req, res) => {
 
     // verifico que el token este bien formado
     if (!decoded || !decoded.iss) {
-
+      console.log(`Token malformado`);
       return res.status(401).json({
         error: 'Token malformado'
       });
@@ -130,18 +130,22 @@ app.post('/compras', (req, res) => {
       mensaje: 'Evento recibido'
     });
 
+    console.log(`Token valido`);
+
     bus.emit(evento, req.body);
 
   } catch (error) {
 
     // token expirado
     if (error.name === 'TokenExpiredError') {
-
+      console.log(`Token expirado`);
       return res.status(401).json({
         error: 'Token expirado'
       });
 
     }
+
+    console.log(`Token inválido: ${error.message}`);
 
     // token invalido
     return res.status(401).json({
