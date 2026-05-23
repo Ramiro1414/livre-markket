@@ -59,61 +59,9 @@ const SERVICE_NAME = 'infracciones';
 
 const bus = new EventEmitter();
 
-// ==================================================
-// producto_reservado
-// ==================================================
-
-bus.on('producto_reservado', async (payload) => {
-
-  let { compra } = payload;
-
-  console.log(`Detectando infracciones para compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
-  compra.estado = 'detectando_infracciones';
-
-  compra.historial_estados.push('detectando_infracciones')
-
-  compra.hasPublicacion = Math.random() > 0.7 ? true : false;
-
-  compra.estado = 'infraccion_detectada';
-
-  compra.historial_estados.push('infraccion_detectada');
-
-  console.log(`Resultado infracción compra ${compra.id}: ${compra.hasPublicacion}`);
-
-  // ==========================================
-  // evento hacia Compras
-  // ==========================================
-
-  const token = generarToken(SERVICE_NAME);
-
-  try {
-
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'infraccion_detectada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Compras`);
-  }
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
-
-// ==================================================
-// Endpoint único
-// ==================================================
 
 app.post('/infracciones', (req, res) => {
 
@@ -201,13 +149,41 @@ app.post('/infracciones', (req, res) => {
 
 });
 
-// ==================================================
+bus.on('producto_reservado', async (payload) => {
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  let { compra } = payload;
+
+  compra.estado = 'detectando_infracciones';
+
+  compra.historial_estados.push('detectando_infracciones')
+
+  compra.hasPublicacion = Math.random() > 0.7 ? true : false;
+
+  compra.estado = 'infraccion_detectada';
+
+  compra.historial_estados.push('infraccion_detectada');
+
+  const token = generarToken(SERVICE_NAME);
+
+  try {
+
+    await fetch('https://compras:3000/compras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        evento: 'infraccion_detectada',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Compras`);
+  }
 });
-
-// ==================================================
 
 function generarToken(servicio) {
 

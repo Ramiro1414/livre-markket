@@ -60,138 +60,9 @@ const SERVICE_NAME = 'envios';
 
 const bus = new EventEmitter();
 
-bus.on('pago_autorizado', async (payload) => {
-
-  let { compra } = payload;
-
-  console.log(`Enviando producto para compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
-  compra.estado = 'enviando_producto';
-
-  compra.historial_estados.push('enviando_producto');
-
-  console.log(`Producto enviado para compra ${compra.id}`);
-
-  // ==========================================
-  // evento hacia Compras
-  // ==========================================
-
-  const token = generarToken(SERVICE_NAME);
-
-  try {
-
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'producto_enviado',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Compras`);
-  }
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
-
-// ==================================================
-// producto_reservado
-// ==================================================
-
-bus.on('producto_reservado', async (payload) => {
-
-  const { compra } = payload;
-
-  console.log(`Solicitud de forma de entrega para compra ${compra.id}`);
-
-  const token = generarToken(SERVICE_NAME);
-
-  try {
-
-    await fetch('https://web:3000/web', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'forma_entrega_solicitada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Web`);
-  }
-});
-
-// ==================================================
-// forma_entrega_seleccionada
-// ==================================================
-
-bus.on('forma_entrega_seleccionada', async (payload) => {
-
-  let { compra } = payload;
-
-  console.log(`Forma de entrega seleccionada para compra ${compra.id}: ${compra.forma_entrega}`);
-
-  compra.estado = 'forma_entrega_seleccionada';
-
-  compra.historial_estados.push('forma_entrega_seleccionada');
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
-  if (compra.forma_entrega === 'correo')
-    compra.costo = Math.floor(Math.random() * 1000);
-  else
-    compra.costo = 0;
-
-  compra.estado = 'envio_calculado';
-
-  compra.historial_estados.push('envio_calculado');
-
-  console.log(`Costo de envío calculado para compra ${compra.id}: ${compra.costo}`);
-
-  // ==========================================
-  // evento hacia Compras
-  // ==========================================
-
-  const token = generarToken(SERVICE_NAME);
-
-  try {
-
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'envio_calculado',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Compras`);
-  }
-});
-
-// ==================================================
-// Endpoint único
-// ==================================================
 
 app.post('/envios', (req, res) => {
 
@@ -278,13 +149,100 @@ app.post('/envios', (req, res) => {
   }
 });
 
-// ==================================================
+bus.on('pago_autorizado', async (payload) => {
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  let { compra } = payload;
+
+  compra.estado = 'enviando_producto';
+
+  compra.historial_estados.push('enviando_producto');
+
+  const token = generarToken(SERVICE_NAME);
+
+  try {
+
+    await fetch('https://compras:3000/compras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        evento: 'producto_enviado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Compras`);
+  }
 });
 
-// ==================================================
+bus.on('producto_reservado', async (payload) => {
+
+  const { compra } = payload;
+
+  const token = generarToken(SERVICE_NAME);
+
+  try {
+
+    await fetch('https://web:3000/web', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        evento: 'forma_entrega_solicitada',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Web`);
+  }
+});
+
+bus.on('forma_entrega_seleccionada', async (payload) => {
+
+  let { compra } = payload;
+
+  compra.estado = 'forma_entrega_seleccionada';
+
+  compra.historial_estados.push('forma_entrega_seleccionada');
+
+  if (compra.forma_entrega === 'correo')
+    compra.costo = Math.floor(Math.random() * 1000);
+  else
+    compra.costo = 0;
+
+  compra.estado = 'envio_calculado';
+
+  compra.historial_estados.push('envio_calculado');
+
+  const token = generarToken(SERVICE_NAME);
+
+  try {
+
+    await fetch('https://compras:3000/compras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        evento: 'envio_calculado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Compras`);
+  }
+});
 
 function generarToken(servicio) {
 

@@ -159,35 +159,13 @@ bus.on('producto_enviado', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Finalizando compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'compra_confirmada_en_proceso_de_envio';
 
   compra.historial_estados.push(
     'compra_confirmada_en_proceso_de_envio'
   );
 
-  // ==========================================
-  // guardar localmente
-  // ==========================================
-
   compras[compra.id] = compra;
-
-  console.log(`Compra ${compra.id} almacenada localmente`);
-
-  console.log(`Compra ${compra.id} finalizada`);
-
-  console.log('===============================================');
-
-  console.log(JSON.stringify(compra, null, 2));
-
-  // ==========================================
-  // emitir evento final
-  // ==========================================
 
   const eventoFinal = {
     evento: 'compra_confirmada_en_proceso_de_envio',
@@ -196,39 +174,43 @@ bus.on('producto_enviado', async (payload) => {
 
   const token = generarToken(SERVICE_NAME);
 
-  fetch('https://web:3000/web', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(eventoFinal)
-  }).catch(error => {
+  try {
 
-    console.log(`Error comunicando con Web`);
-  });
+    fetch('https://web:3000/web', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(eventoFinal)
+    }).catch(error => {
 
-  fetch('https://publicaciones:3000/publicaciones', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(eventoFinal)
-  }).catch(error => {
+      console.log(`Error comunicando con Web`);
+    });
 
-    console.log(`Error comunicando con Publicaciones`);
-  });
+    fetch('https://publicaciones:3000/publicaciones', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(eventoFinal)
+    }).catch(error => {
+
+      console.log(`Error comunicando con Publicaciones`);
+    });
+
+  } catch (error) {
+
+    console.log(`Error general enviando evento final`);
+
+  }
   
 });
 
 bus.on('pago_rechazado', async (payload) => {
 
   let { compra } = payload;
-
-  console.log(`Pago rechazado para compra ${compra.id}`);
-
-  console.log(`Cancelando pedido para compra ${compra.id}`);
 
   cancelar_compra(compra)
 });
@@ -237,27 +219,11 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Finalizando cancelación de compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'compra_cancelada';
 
   compra.historial_estados.push('compra_cancelada');
 
   compras[compra.id] = compra
-
-  console.log(`Compra ${compra.id} cancelada`);
-
-  console.log('===============================================');
-
-  console.log(JSON.stringify(compra, null, 2));
-
-  // ==========================================
-  // emitir evento final
-  // ==========================================
 
   const eventoFinal = {
     evento: 'compra_cancelada',
@@ -266,29 +232,37 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
   const token = generarToken(SERVICE_NAME);
 
-  fetch('https://web:3000/web', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(eventoFinal)
-  }).catch(error => {
+  try {
+
+    fetch('https://web:3000/web', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(eventoFinal)
+    }).catch(error => {
 
       console.log(`Error comunicando con Web`);
-  });
+    });
 
-  fetch('https://publicaciones:3000/publicaciones', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(eventoFinal)
-  }).catch(error => {
+    fetch('https://publicaciones:3000/publicaciones', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(eventoFinal)
+    }).catch(error => {
 
-    console.log(`Error comunicando con Publicaciones`);
-  });
+      console.log(`Error comunicando con Publicaciones`);
+    });
+
+  } catch (error) {
+
+    console.log(`Error general comunicando evento final`);
+
+  }
 
 });
 
@@ -306,22 +280,28 @@ bus.on('producto_seleccionado', async (payload) => {
 
   compras[compra.id] = compra;
 
-  console.log(`Nuevo pedido generado`);
-
   const token = generarToken(SERVICE_NAME);
 
   // Emitir evento a Publicaciones
-  await fetch('https://publicaciones:3000/publicaciones', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({
-      evento: 'nuevo_pedido_creado',
-      compra
-    })
-  });
+  try {
+
+    await fetch('https://publicaciones:3000/publicaciones', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        evento: 'nuevo_pedido_creado',
+        compra
+      })
+    });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Publicaciones`);
+
+  }
 
 });
 
@@ -329,11 +309,7 @@ bus.on('envio_calculado', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento envio_calculado recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -349,11 +325,7 @@ bus.on('forma_pago_seleccionada', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento forma_pago_seleccionada recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -369,11 +341,7 @@ bus.on('infraccion_detectada', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento infraccion_detectada recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -418,21 +386,10 @@ function fanInCompleto(compra) {
 }
 
 async function continuar_flujo(compra) {
-  console.log(`Confirmando compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
 
   compra.estado = 'compra_confirmada';
 
   compra.historial_estados.push('compra_confirmada');
-
-  console.log(`Compra ${compra.id} confirmada`);
-
-  // ==========================================
-  // evento hacia Pagos
-  // ==========================================
 
   const token = generarToken(SERVICE_NAME);
 
@@ -459,21 +416,9 @@ async function continuar_flujo(compra) {
 
 async function cancelar_compra(compra) {
 
-  console.log(`Cancelando pedido para compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'pedido_cancelado';
 
   compra.historial_estados.push('pedido_cancelado');
-
-  console.log(`Pedido cancelado para compra ${compra.id}`);
-
-  // ==========================================
-  // evento hacia Publicaciones
-  // ==========================================
 
   const token = generarToken(SERVICE_NAME);
 

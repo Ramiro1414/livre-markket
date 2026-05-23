@@ -61,9 +61,41 @@ const bus = new EventEmitter();
 
 const compras = {};
 
-// ==================================================
-// Helpers
-// ==================================================
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.post('/simular-compra', async (req, res) => {
+
+  const { producto } = req.body;
+
+  const token = generarToken(SERVICE_NAME);
+
+  try {
+
+    await fetch('https://compras:3000/compras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        evento: 'producto_seleccionado',
+        producto
+      })
+    });
+
+    return res.status(200).json({
+      mensaje: 'Compra iniciada'
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+      error: 'Error comunicando con Compras'
+    });
+  }
+});
 
 function randomFormaEntrega() {
 
@@ -76,45 +108,23 @@ bus.on('compra_cancelada', async (payload) => {
 
   const { compra } = payload;
 
-  console.log(`Guardando compra ${compra.id} en Web`);
-
-  // ==========================================
-  // guardar localmente cuando se cancela la compra
-  // ==========================================
-
   compras[compra.id] = compra;
 
-  console.log(`Compra ${compra.id} almacenada en Web`);
 });
 
 bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
 
   const { compra } = payload;
 
-  console.log(`Guardando compra ${compra.id} en Web`);
-
-  // ==========================================
-  // guardar localmente cuando se confirma y envia la compra
-  // ==========================================
-
   compras[compra.id] = compra;
 
-  console.log(`Compra ${compra.id} almacenada en Web`);
 });
-
-// ==================================================
-// Listener: forma_entrega_solicitada
-// ==================================================
 
 bus.on('forma_entrega_solicitada', async (payload) => {
 
   const { compra } = payload;
 
-  console.log(`Seleccionando forma de entrega para compra ${compra.id}`);
-
   compra.forma_entrega = randomFormaEntrega();
-
-  console.log(`Forma seleccionada: ${compra.forma_entrega}`);
 
   const token = generarToken(SERVICE_NAME);
 
@@ -138,20 +148,12 @@ bus.on('forma_entrega_solicitada', async (payload) => {
   }
 });
 
-// ==================================================
-// Listener: forma_pago_solicitada
-// ==================================================
-
 bus.on('forma_pago_solicitada', async (payload) => {
 
   const { compra } = payload;
 
-  console.log(`Seleccionando forma de pago para compra ${compra.id}`);
-
   compra.medio_pago =
     Math.random() > 0.5 ? 'tarjeta' : 'efectivo';
-
-  console.log(`Medio de pago seleccionado: ${compra.medio_pago}`);
 
   const token = generarToken(SERVICE_NAME);
 
@@ -174,10 +176,6 @@ bus.on('forma_pago_solicitada', async (payload) => {
     console.log(`Error comunicando con Pagos`);
   }
 });
-
-// ==================================================
-// Endpoint único
-// ==================================================
 
 app.post('/web', (req, res) => {
 
@@ -264,52 +262,6 @@ app.post('/web', (req, res) => {
     }
 
 });
-
-// ==================================================
-// Endpoint inicial del workflow
-// ==================================================
-
-app.post('/simular-compra', async (req, res) => {
-
-  const { producto } = req.body;
-
-  console.log(`Cliente seleccionó producto: ${producto}`);
-
-  const token = generarToken(SERVICE_NAME);
-
-  try {
-
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'producto_seleccionado',
-        producto
-      })
-    });
-
-    return res.status(200).json({
-      mensaje: 'Compra iniciada'
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      error: 'Error comunicando con Compras'
-    });
-  }
-});
-
-// ==================================================
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// ==================================================
 
 function generarToken(servicio) {
 
