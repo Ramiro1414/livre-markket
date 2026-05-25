@@ -28,7 +28,6 @@ const SERVICIOS_AUTORIZADOS = {
 const nombre = 'compras'
 const password = '123456789'
 
-// "Base de datos" en memoria
 const compras = {};
 let currentId = 1;
 
@@ -41,45 +40,47 @@ app.post('/compras', (req, res) => {
 
   const { evento, nombre, password } = req.body;
 
-  // ==========================================
-  // credenciales ausentes
-  // ==========================================
-
+  // sin credenciales
   if (!nombre || !password) {
-
-    return res.status(400).json({
+    console.log(`Credenciales faltantes en la solicitud`);
+    return res.status(401).json({
       error: 'Credenciales requeridas'
     });
 
   }
 
-  // ==========================================
-  // servicio inexistente
-  // ==========================================
-
+  // servicio que no existe
   if (!SERVICIOS_AUTORIZADOS[nombre]) {
 
+    console.log(`Servicio no autorizado: ${nombre}`);
     return res.status(401).json({
       error: 'Servicio no autorizado'
     });
 
   }
 
-  // ==========================================
-  // password inválida
-  // ==========================================
-
+  // contraseña invalida
   if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
 
+    console.log(`Credenciales inválidas para el servicio: ${nombre}`);
     return res.status(401).json({
       error: 'Credenciales inválidas'
     });
 
   }
 
+  if (bus.listenerCount(evento) === 0) {
+
+    return res.status(400).json({
+      error: `Evento no soportado: ${evento}`
+    });
+  }
+
   res.status(200).json({
     mensaje: 'Evento recibido'
   });
+
+  console.log(`Credenciales validas para el servicio: ${nombre}. Procesando evento: ${evento}`);
 
   bus.emit(evento, req.body);
 });
@@ -88,35 +89,13 @@ bus.on('producto_enviado', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Finalizando compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'compra_confirmada_en_proceso_de_envio';
 
   compra.historial_estados.push(
     'compra_confirmada_en_proceso_de_envio'
   );
 
-  // ==========================================
-  // guardar localmente
-  // ==========================================
-
   compras[compra.id] = compra;
-
-  console.log(`Compra ${compra.id} almacenada localmente`);
-
-  console.log(`Compra ${compra.id} finalizada`);
-
-  console.log('===============================================');
-
-  console.log(JSON.stringify(compra, null, 2));
-
-  // ==========================================
-  // emitir evento final
-  // ==========================================
 
   const eventoFinal = {
     evento: 'compra_confirmada_en_proceso_de_envio',
@@ -153,10 +132,6 @@ bus.on('pago_rechazado', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Pago rechazado para compra ${compra.id}`);
-
-  console.log(`Cancelando pedido para compra ${compra.id}`);
-
   cancelar_compra(compra)
 });
 
@@ -164,27 +139,11 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Finalizando cancelación de compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'compra_cancelada';
 
   compra.historial_estados.push('compra_cancelada');
 
   compras[compra.id] = compra
-
-  console.log(`Compra ${compra.id} cancelada`);
-
-  console.log('===============================================');
-
-  console.log(JSON.stringify(compra, null, 2));
-
-  // ==========================================
-  // emitir evento final
-  // ==========================================
 
   const eventoFinal = {
     evento: 'compra_cancelada',
@@ -231,8 +190,6 @@ bus.on('producto_seleccionado', async (payload) => {
 
   compras[compra.id] = compra;
 
-  console.log(`Nuevo pedido generado`);
-
   // Emitir evento a Publicaciones
   await fetch('https://publicaciones:3000/publicaciones', {
     method: 'POST',
@@ -253,11 +210,7 @@ bus.on('envio_calculado', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento envio_calculado recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -273,11 +226,7 @@ bus.on('forma_pago_seleccionada', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento forma_pago_seleccionada recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -293,11 +242,7 @@ bus.on('infraccion_detectada', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento infraccion_detectada recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -342,21 +287,10 @@ function fanInCompleto(compra) {
 }
 
 async function continuar_flujo(compra) {
-  console.log(`Confirmando compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
 
   compra.estado = 'compra_confirmada';
 
   compra.historial_estados.push('compra_confirmada');
-
-  console.log(`Compra ${compra.id} confirmada`);
-
-  // ==========================================
-  // evento hacia Pagos
-  // ==========================================
 
   try {
 
@@ -382,21 +316,9 @@ async function continuar_flujo(compra) {
 
 async function cancelar_compra(compra) {
 
-  console.log(`Cancelando pedido para compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'pedido_cancelado';
 
   compra.historial_estados.push('pedido_cancelado');
-
-  console.log(`Pedido cancelado para compra ${compra.id}`);
-
-  // ==========================================
-  // evento hacia Publicaciones
-  // ==========================================
 
   try {
 

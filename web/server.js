@@ -27,64 +27,109 @@ const SERVICIOS_AUTORIZADOS = {
 const nombre = 'web'
 const password = '333333333'
 
-const bus = new EventEmitter();
-
 const compras = {};
 
-// ==================================================
-// Helpers
-// ==================================================
+const bus = new EventEmitter();
 
-function randomFormaEntrega() {
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
-  const opciones = ['correo', 'retira'];
+app.post('/web', (req, res) => {
 
-  return opciones[Math.floor(Math.random() * opciones.length)];
-}
+  const { evento, nombre, password } = req.body;
+
+  if (!nombre || !password) {
+    console.log(`Credenciales faltantes en la solicitud`);
+    return res.status(400).json({
+      error: 'Credenciales requeridas'
+    });
+
+  }
+
+  if (!SERVICIOS_AUTORIZADOS[nombre]) {
+    console.log(`Servicio no autorizado: ${nombre}`);
+    return res.status(401).json({
+      error: 'Servicio no autorizado'
+    });
+
+  }
+
+  if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
+    console.log(`Credenciales inválidas para el servicio: ${nombre}`);
+    return res.status(401).json({
+      error: 'Credenciales inválidas'
+    });
+
+  }
+
+  if (bus.listenerCount(evento) === 0) {
+
+    return res.status(400).json({
+      error: `Evento no soportado: ${evento}`
+    });
+  }
+
+  // responder primero
+  res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
+
+  console.log(`Credenciales validas para el servicio: ${nombre}. Procesando evento: ${evento}`);
+
+  bus.emit(evento, req.body);
+});
+
+app.post('/simular-compra', async (req, res) => {
+
+  const { producto } = req.body;
+
+  try {
+
+    await fetch('https://compras:3000/compras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        evento: 'producto_seleccionado',
+        producto,
+        nombre: nombre, 
+        password: password 
+      })
+    });
+
+    return res.status(200).json({
+      mensaje: 'Compra iniciada'
+    });
+
+  } catch (error) {
+
+    return res.status(500).json({
+      error: 'Error comunicando con Compras'
+    });
+  }
+});
 
 bus.on('compra_cancelada', async (payload) => {
 
   const { compra } = payload;
 
-  console.log(`Guardando compra ${compra.id} en Web`);
-
-  // ==========================================
-  // guardar localmente cuando se cancela la compra
-  // ==========================================
-
   compras[compra.id] = compra;
-
-  console.log(`Compra ${compra.id} almacenada en Web`);
 });
 
 bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
 
   const { compra } = payload;
 
-  console.log(`Guardando compra ${compra.id} en Web`);
-
-  // ==========================================
-  // guardar localmente cuando se confirma y envia la compra
-  // ==========================================
-
   compras[compra.id] = compra;
-
-  console.log(`Compra ${compra.id} almacenada en Web`);
 });
-
-// ==================================================
-// Listener: forma_entrega_solicitada
-// ==================================================
 
 bus.on('forma_entrega_solicitada', async (payload) => {
 
   const { compra } = payload;
 
-  console.log(`Seleccionando forma de entrega para compra ${compra.id}`);
-
   compra.forma_entrega = randomFormaEntrega();
-
-  console.log(`Forma seleccionada: ${compra.forma_entrega}`);
 
   try {
 
@@ -107,20 +152,12 @@ bus.on('forma_entrega_solicitada', async (payload) => {
   }
 });
 
-// ==================================================
-// Listener: forma_pago_solicitada
-// ==================================================
-
 bus.on('forma_pago_solicitada', async (payload) => {
 
   const { compra } = payload;
 
-  console.log(`Seleccionando forma de pago para compra ${compra.id}`);
-
   compra.medio_pago =
     Math.random() > 0.5 ? 'tarjeta' : 'efectivo';
-
-  console.log(`Medio de pago seleccionado: ${compra.medio_pago}`);
 
   try {
 
@@ -143,112 +180,12 @@ bus.on('forma_pago_solicitada', async (payload) => {
   }
 });
 
-// ==================================================
-// Endpoint único
-// ==================================================
+function randomFormaEntrega() {
 
-app.post('/web', (req, res) => {
+  const opciones = ['correo', 'retira'];
 
-  const { evento, nombre, password } = req.body;
-
-  console.log(`Evento recibido: ${evento}`);
-
-  // ==========================================
-  // credenciales ausentes
-  // ==========================================
-
-  if (!nombre || !password) {
-
-    return res.status(400).json({
-      error: 'Credenciales requeridas'
-    });
-
-  }
-
-  // ==========================================
-  // servicio inexistente
-  // ==========================================
-
-  if (!SERVICIOS_AUTORIZADOS[nombre]) {
-
-    return res.status(401).json({
-      error: 'Servicio no autorizado'
-    });
-
-  }
-
-  // ==========================================
-  // password inválida
-  // ==========================================
-
-  if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
-
-    return res.status(401).json({
-      error: 'Credenciales inválidas'
-    });
-
-  }
-
-  if (bus.listenerCount(evento) === 0) {
-
-    return res.status(400).json({
-      error: `Evento no soportado: ${evento}`
-    });
-  }
-
-  // responder primero
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
-
-
-  bus.emit(evento, req.body);
-});
-
-// ==================================================
-// Endpoint inicial del workflow
-// ==================================================
-
-app.post('/simular-compra', async (req, res) => {
-
-  const { producto } = req.body;
-
-  console.log(`Cliente seleccionó producto: ${producto}`);
-
-  try {
-
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'producto_seleccionado',
-        producto,
-        nombre: nombre, // !!!!!!!!!!!!! TESTEANDO CREDENCIALES !!!!!!!!!!!!! 
-        password: password // !!!!!!!!!!!!! TESTEANDO CREDENCIALES !!!!!!!!!!!!! 
-      })
-    });
-
-    return res.status(200).json({
-      mensaje: 'Compra iniciada'
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      error: 'Error comunicando con Compras'
-    });
-  }
-});
-
-// ==================================================
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// ==================================================
+  return opciones[Math.floor(Math.random() * opciones.length)];
+}
 
 const PORT = 3000;
 https.createServer(options, app).listen(PORT, () => {

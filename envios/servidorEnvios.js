@@ -29,25 +29,62 @@ const password = '555555555'
 
 const bus = new EventEmitter();
 
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.post('/envios', (req, res) => {
+
+  const { evento, nombre, password } = req.body;
+
+  if (!nombre || !password) {
+    console.log(`Credenciales faltantes en la solicitud`);
+    return res.status(400).json({
+      error: 'Credenciales requeridas'
+    });
+
+  }
+
+  if (!SERVICIOS_AUTORIZADOS[nombre]) {
+    console.log(`Servicio no autorizado: ${nombre}`);
+    return res.status(401).json({
+      error: 'Servicio no autorizado'
+    });
+
+  }
+
+  if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
+    console.log(`Credenciales inválidas para el servicio: ${nombre}`);
+    return res.status(401).json({
+      error: 'Credenciales inválidas'
+    });
+
+  }
+
+  if (bus.listenerCount(evento) === 0) {
+
+    return res.status(400).json({
+      error: `Evento no soportado: ${evento}`
+    });
+  }
+
+  // responder primero
+  res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
+
+  console.log(`Credenciales validas para el servicio: ${nombre}. Procesando evento: ${evento}`);
+
+  bus.emit(evento, req.body);
+});
+
 bus.on('pago_autorizado', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Enviando producto para compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'enviando_producto';
 
   compra.historial_estados.push('enviando_producto');
-
-  console.log(`Producto enviado para compra ${compra.id}`);
-
-  // ==========================================
-  // evento hacia Compras
-  // ==========================================
 
   try {
 
@@ -70,15 +107,9 @@ bus.on('pago_autorizado', async (payload) => {
   }
 });
 
-// ==================================================
-// producto_reservado
-// ==================================================
-
 bus.on('producto_reservado', async (payload) => {
 
   const { compra } = payload;
-
-  console.log(`Solicitud de forma de entrega para compra ${compra.id}`);
 
   try {
 
@@ -101,23 +132,13 @@ bus.on('producto_reservado', async (payload) => {
   }
 });
 
-// ==================================================
-// forma_entrega_seleccionada
-// ==================================================
-
 bus.on('forma_entrega_seleccionada', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Forma de entrega seleccionada para compra ${compra.id}: ${compra.forma_entrega}`);
-
   compra.estado = 'forma_entrega_seleccionada';
 
   compra.historial_estados.push('forma_entrega_seleccionada');
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
 
   if (compra.forma_entrega === 'correo')
     compra.costo = Math.floor(Math.random() * 1000);
@@ -127,12 +148,6 @@ bus.on('forma_entrega_seleccionada', async (payload) => {
   compra.estado = 'envio_calculado';
 
   compra.historial_estados.push('envio_calculado');
-
-  console.log(`Costo de envío calculado para compra ${compra.id}: ${compra.costo}`);
-
-  // ==========================================
-  // evento hacia Compras
-  // ==========================================
 
   try {
 
@@ -154,75 +169,6 @@ bus.on('forma_entrega_seleccionada', async (payload) => {
     console.log(`Error comunicando con Compras`);
   }
 });
-
-// ==================================================
-// Endpoint único
-// ==================================================
-
-app.post('/envios', (req, res) => {
-
-  const { evento, nombre, password } = req.body;
-
-  // ==========================================
-  // credenciales ausentes
-  // ==========================================
-
-  if (!nombre || !password) {
-
-    return res.status(400).json({
-      error: 'Credenciales requeridas'
-    });
-
-  }
-
-  // ==========================================
-  // servicio inexistente
-  // ==========================================
-
-  if (!SERVICIOS_AUTORIZADOS[nombre]) {
-
-    return res.status(401).json({
-      error: 'Servicio no autorizado'
-    });
-
-  }
-
-  // ==========================================
-  // password inválida
-  // ==========================================
-
-  if (SERVICIOS_AUTORIZADOS[nombre] !== password) {
-
-    return res.status(401).json({
-      error: 'Credenciales inválidas'
-    });
-
-  }
-
-  console.log(`Evento recibido: ${evento}`);
-
-  if (bus.listenerCount(evento) === 0) {
-
-    return res.status(400).json({
-      error: `Evento no soportado: ${evento}`
-    });
-  }
-
-  // responder primero
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
-
-  bus.emit(evento, req.body);
-});
-
-// ==================================================
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// ==================================================
 
 const PORT = 3000;
 https.createServer(options, app).listen(PORT, () => {
