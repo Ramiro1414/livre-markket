@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const WEB_URL = 'https://web:3000';
-const JWT_SECRET = process.env.JWT_SECRET;
-const SERVICE_NAME = 'simulador_compras';
+const SERVICE_NAME = 'compras';
+
+const PRIVATE_KEY = fs.readFileSync(
+  path.join(__dirname, 'keys/private.key'),
+  'utf8'
+);
 
 comprar('producto1');
 comprar('producto2');
@@ -18,7 +24,7 @@ async function comprar(producto) {
 
   try {
 
-    const token = generarToken("SERVICE_NAME");
+    const token = generarToken(SERVICE_NAME);
 
     console.log('====================================================');
     console.log(`Iniciando compra de ${producto}`);
@@ -53,10 +59,15 @@ async function comprar(producto) {
 }
 
 function generarToken(servicio) {
+
   return jwt.sign(
-    { iss: servicio },
-    JWT_SECRET,
-    { expiresIn: '60s' },
-    { algorithm: 'HS256' }
+    {
+      iss: servicio
+    },
+    PRIVATE_KEY,
+    {
+      algorithm: 'RS256',
+      expiresIn: '60s'
+    }
   );
 }
