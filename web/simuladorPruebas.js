@@ -24,10 +24,6 @@ const WEB_PUBLIC_KEY = fs.readFileSync(
   'utf8'
 );
 
-// ==========================================
-// helper
-// ==========================================
-
 async function enviarCompra(nombrePrueba, token) {
 
   console.log('\n===================================================');
@@ -62,10 +58,6 @@ async function enviarCompra(nombrePrueba, token) {
 
   }
 }
-
-// ==========================================
-// pruebas
-// ==========================================
 
 async function main() {
 
