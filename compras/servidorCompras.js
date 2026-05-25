@@ -190,6 +190,8 @@ bus.on('producto_seleccionado', async (payload) => {
 
   compras[compra.id] = compra;
 
+  try {
+
   // Emitir evento a Publicaciones
   await fetch('https://publicaciones:3000/publicaciones', {
     method: 'POST',
@@ -203,6 +205,12 @@ bus.on('producto_seleccionado', async (payload) => {
       password: password
     })
   });
+
+  } catch (error) {
+
+    console.log(`Error comunicando con Publicaciones`);
+
+  }
 
 });
 
