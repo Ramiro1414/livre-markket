@@ -6,6 +6,7 @@ const fs = require('fs');
 const app = express();
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const { consumirEventos } = require('./rabbitmq');
 
 const EventEmitter = require('events');
 const bus = new EventEmitter();
@@ -60,6 +61,14 @@ const SERVICE_NAME = 'compras';
 // "Base de datos" en memoria
 const compras = {};
 let currentId = 1;
+
+consumirEventos('compras', (payload) => {
+
+  console.log('Mensaje recibido');
+
+  console.log(payload);
+
+});
 
 // Endpoint de prueba
 app.get('/health', (req, res) => {

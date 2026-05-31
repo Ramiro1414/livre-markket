@@ -6,6 +6,7 @@ const fs = require('fs');
 const EventEmitter = require('events');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const { publicarEvento } = require('./rabbitmq');
 
 const app = express();
 
@@ -69,20 +70,11 @@ app.post('/simular-compra', async (req, res) => {
 
   const { producto } = req.body;
 
-  const token = generarToken(SERVICE_NAME);
-
   try {
 
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'producto_seleccionado',
-        producto
-      })
+    await publicarEvento('compras', {
+      evento: 'producto_seleccionado',
+      producto
     });
 
     return res.status(200).json({
@@ -91,8 +83,10 @@ app.post('/simular-compra', async (req, res) => {
 
   } catch (error) {
 
+    console.error(error);
+
     return res.status(500).json({
-      error: 'Error comunicando con Compras'
+      error: 'Error publicando evento'
     });
   }
 });

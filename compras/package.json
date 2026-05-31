@@ -9,6 +9,7 @@
     "author": "demian",
     "license": "ISC",
     "dependencies": {
+        "amqplib": "^2.0.1",
         "atomic-sleep": "^1.0.0",
         "express": "^5.2.1",
         "jsonwebtoken": "^9.0.3"

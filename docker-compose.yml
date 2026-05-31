@@ -1,3 +1,8 @@
+networks:
+  app-network:
+    # Define la red llamada "app-network"
+    driver: bridge # Usa el controlador por defecto "bridge"
+
 services:
 
   compras:
@@ -12,10 +17,10 @@ services:
     volumes:
       - ./compras:/home/compras
     command: sh
+    networks:
+      - app-network
     ports:
       - "3000:3000"
-    environment:
-      - JWT_SECRET=s3cret
 
   envios:
     build:
@@ -29,10 +34,10 @@ services:
     volumes:
       - ./envios:/home/envios
     command: sh
+    networks:
+      - app-network
     ports:
       - "3001:3000"
-    environment:
-      - JWT_SECRET=s3cret
 
   infracciones:
     build:
@@ -46,10 +51,10 @@ services:
     volumes:
       - ./infracciones:/home/infracciones
     command: sh
+    networks:
+      - app-network
     ports:
       - "3002:3000"
-    environment:
-      - JWT_SECRET=s3cret
 
   pagos:
     build:
@@ -63,10 +68,10 @@ services:
     volumes:
       - ./pagos:/home/pagos
     command: sh
+    networks:
+      - app-network
     ports:
       - "3003:3000"
-    environment:
-      - JWT_SECRET=s3cret
 
   publicaciones:
     build:
@@ -80,10 +85,10 @@ services:
     volumes:
       - ./publicaciones:/home/publicaciones
     command: sh
+    networks:
+      - app-network
     ports:
       - "3004:3000"
-    environment:
-      - JWT_SECRET=s3cret
 
   web:
     build:
@@ -97,9 +102,43 @@ services:
     volumes:
       - ./web:/home/web
     command: sh
+    networks:
+      - app-network
     ports:
       - "8080:3000"
     depends_on:
       - compras
+
+  startup-rabbit:
+    build:
+      context: ./startup-rabbit
+      dockerfile: Dockerfile
+    container_name: startup-rabbit
+    working_dir: /home/startup-rabbit
+    restart: always
+    networks:
+      - app-network
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./startup-rabbit:/home/startup-rabbit
+    command: sh
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    hostname: "rabbit"
+    restart: always
+    networks:
+      - app-network
+    ports:
+      - "5672:5672" # Puerto de comunicación de RabbitMQ
+      - "15672:15672" # Puerto del dashboard de gestión
     environment:
-      - JWT_SECRET=s3cret
+      RABBITMQ_DEFAULT_USER: arys
+      RABBITMQ_DEFAULT_PASS: arys
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  rabbitmq_data:
