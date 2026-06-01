@@ -6,6 +6,7 @@ const fs = require('fs');
 const EventEmitter = require('events');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const { publicarEvento, consumirEventos } = require('./rabbitmq');
 
 const app = express();
 
@@ -58,6 +59,21 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const SERVICE_NAME = 'infracciones';
 
 const bus = new EventEmitter();
+
+consumirEventos('infracciones', (payload) => {
+
+  const { evento } = payload;
+
+  if (bus.listenerCount(evento) === 0) {
+
+    console.log(`Evento no soportado: ${evento}`);
+
+    return;
+  }
+
+  bus.emit(evento, payload);
+
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -163,26 +179,19 @@ bus.on('producto_reservado', async (payload) => {
 
   compra.historial_estados.push('infraccion_detectada');
 
-  const token = generarToken(SERVICE_NAME);
-
   try {
 
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'infraccion_detectada',
-        compra
-      })
+    await publicarEvento('compras', {
+      evento: 'infraccion_detectada',
+      compra
     });
 
   } catch (error) {
 
-    console.log(`Error comunicando con Compras`);
+    console.error(error);
+
   }
+
 });
 
 function generarToken(servicio) {

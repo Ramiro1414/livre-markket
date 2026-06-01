@@ -8,6 +8,7 @@ const EventEmitter = require('events');
 const app = express();
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const { publicarEvento, consumirEventos } = require('./rabbitmq');
 
 app.use(express.json());
 
@@ -59,6 +60,21 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const SERVICE_NAME = 'envios';
 
 const bus = new EventEmitter();
+
+consumirEventos('envios', (payload) => {
+
+  const { evento } = payload;
+
+  if (bus.listenerCount(evento) === 0) {
+
+    console.log(`Evento no soportado: ${evento}`);
+
+    return;
+  }
+
+  bus.emit(evento, payload);
+
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -157,52 +173,38 @@ bus.on('pago_autorizado', async (payload) => {
 
   compra.historial_estados.push('enviando_producto');
 
-  const token = generarToken(SERVICE_NAME);
-
   try {
 
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'producto_enviado',
-        compra
-      })
+    await publicarEvento('compras', {
+      evento: 'producto_enviado',
+      compra
     });
 
   } catch (error) {
 
-    console.log(`Error comunicando con Compras`);
+    console.error(error);
+
   }
+
 });
 
 bus.on('producto_reservado', async (payload) => {
 
   const { compra } = payload;
 
-  const token = generarToken(SERVICE_NAME);
-
   try {
 
-    await fetch('https://web:3000/web', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'forma_entrega_solicitada',
-        compra
-      })
+    await publicarEvento('web', {
+      evento: 'forma_entrega_solicitada',
+      compra
     });
 
   } catch (error) {
 
-    console.log(`Error comunicando con Web`);
+    console.error(error);
+
   }
+
 });
 
 bus.on('forma_entrega_seleccionada', async (payload) => {
@@ -222,26 +224,19 @@ bus.on('forma_entrega_seleccionada', async (payload) => {
 
   compra.historial_estados.push('envio_calculado');
 
-  const token = generarToken(SERVICE_NAME);
-
   try {
 
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'envio_calculado',
-        compra
-      })
+    await publicarEvento('compras', {
+      evento: 'envio_calculado',
+      compra
     });
 
   } catch (error) {
 
-    console.log(`Error comunicando con Compras`);
+    console.error(error);
+
   }
+
 });
 
 function generarToken(servicio) {

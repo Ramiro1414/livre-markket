@@ -6,6 +6,7 @@ const fs = require('fs');
 const EventEmitter = require('events');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const { publicarEvento, consumirEventos } = require('./rabbitmq');
 
 const app = express();
 app.use(express.json());
@@ -59,6 +60,21 @@ const SERVICE_NAME = 'publicaciones';
 const bus = new EventEmitter();
 
 const compras = {};
+
+consumirEventos('publicaciones', (payload) => {
+
+  const { evento } = payload;
+
+  if (bus.listenerCount(evento) === 0) {
+
+    console.log(`Evento no soportado: ${evento}`);
+
+    return;
+  }
+
+  bus.emit(evento, payload);
+
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -174,75 +190,53 @@ bus.on('pedido_cancelado', async (payload) => {
 
   compra.historial_estados.push('reserva_producto_cancelada');
 
-  const token = generarToken(SERVICE_NAME);
-
   try {
 
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'reserva_producto_cancelada',
-        compra
-      })
+    await publicarEvento('compras', {
+      evento: 'reserva_producto_cancelada',
+      compra
     });
 
   } catch (error) {
 
-    console.log(`Error comunicando con Compras`);
+    console.error(error);
+
   }
+
 });
 
-bus.on('nuevo_pedido_creado', (payload) => {
+bus.on('nuevo_pedido_creado', async (payload) => {
 
   const { compra } = payload;
 
   compra.estado = 'producto_reservado';
 
-  compra.historial_estados.push('producto_reservado');
+  compra.historial_estados.push(
+    'producto_reservado'
+  );
 
   const evento = {
     evento: 'producto_reservado',
     compra
   };
 
-  const token = generarToken(SERVICE_NAME);
+  try {
 
-  fetch('https://envios:3000/envios', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(evento)
-  }).catch(error => {
-    console.log(`Error comunicando con Envios`);
-  });
+    await publicarEvento('envios', evento);
 
-  fetch('https://pagos:3000/pagos', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(evento)
-  }).catch(error => {
-    console.log(`Error comunicando con Pagos`);
-  });
+    await publicarEvento('pagos', evento);
 
-  fetch('https://infracciones:3000/infracciones', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(evento)
-  }).catch(error => {
-    console.log(`Error comunicando con Infracciones`);
-  });
+    await publicarEvento('infracciones', evento);
+
+  } catch (error) {
+
+    console.log(
+      'Error publicando evento producto_reservado'
+    );
+
+    console.error(error);
+
+  }
 
 });
 

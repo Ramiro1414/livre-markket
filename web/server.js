@@ -6,7 +6,7 @@ const fs = require('fs');
 const EventEmitter = require('events');
 const jwt = require('jsonwebtoken');
 const path = require('path');
-const { publicarEvento } = require('./rabbitmq');
+const { publicarEvento, consumirEventos } = require('./rabbitmq');
 
 const app = express();
 
@@ -61,6 +61,21 @@ const SERVICE_NAME = 'web';
 const bus = new EventEmitter();
 
 const compras = {};
+
+consumirEventos('web', (payload) => {
+
+  const { evento } = payload;
+
+  if (bus.listenerCount(evento) === 0) {
+
+    console.log(`Evento no soportado: ${evento}`);
+
+    return;
+  }
+
+  bus.emit(evento, payload);
+
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -120,25 +135,17 @@ bus.on('forma_entrega_solicitada', async (payload) => {
 
   compra.forma_entrega = randomFormaEntrega();
 
-  const token = generarToken(SERVICE_NAME);
-
   try {
 
-    await fetch('https://envios:3000/envios', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'forma_entrega_seleccionada',
-        compra
-      })
+    await publicarEvento('envios', {
+      evento: 'forma_entrega_seleccionada',
+      compra
     });
 
   } catch (error) {
 
-    console.log(`Error comunicando con Envios`);
+    console.error(error);
+
   }
 });
 
@@ -149,26 +156,19 @@ bus.on('forma_pago_solicitada', async (payload) => {
   compra.medio_pago =
     Math.random() > 0.5 ? 'tarjeta' : 'efectivo';
 
-  const token = generarToken(SERVICE_NAME);
-
   try {
 
-    await fetch('https://pagos:3000/pagos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        evento: 'forma_pago_seleccionada',
-        compra
-      })
+    await publicarEvento('pagos', {
+      evento: 'forma_pago_seleccionada',
+      compra
     });
 
   } catch (error) {
 
-    console.log(`Error comunicando con Pagos`);
+    console.error(error);
+
   }
+
 });
 
 app.post('/web', (req, res) => {
