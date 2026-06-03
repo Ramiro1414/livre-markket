@@ -80,6 +80,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.get('/publicaciones/listar', (req, res) => {
+
+  return res.status(200).json({
+    compras
+  });
+
+});
+
 app.post('/publicaciones', async (req, res) => {
 
   const authHeader = req.headers.authorization;

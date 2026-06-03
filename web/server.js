@@ -81,6 +81,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.get('/web/listar', (req, res) => {
+
+  return res.status(200).json({
+    compras
+  });
+
+});
+
 app.post('/simular-compra', async (req, res) => {
 
   const { producto } = req.body;
