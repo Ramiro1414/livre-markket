@@ -202,6 +202,8 @@ bus.on('producto_enviado', async (payload) => {
 
     await publicarEvento('publicaciones', eventoFinal);
 
+    await publicarEvento('cqrs', eventoFinal);
+
   } catch (error) {
 
     console.log('Error publicando evento final');
@@ -240,6 +242,8 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
     await publicarEvento('publicaciones', eventoFinal);
 
+    await publicarEvento('cqrs', eventoFinal);
+
   } catch (error) {
 
     console.log('Error publicando evento final');
@@ -267,6 +271,11 @@ bus.on('producto_seleccionado', async (payload) => {
   try {
 
     await publicarEvento('publicaciones', {
+      evento: 'nuevo_pedido_creado',
+      compra
+    });
+
+    await publicarEvento('cqrs', {
       evento: 'nuevo_pedido_creado',
       compra
     });

@@ -90,6 +90,23 @@ services:
     ports:
       - "3004:3000"
 
+  cqrs:
+    build:
+      context: ./cqrs
+      dockerfile: Dockerfile
+    container_name: cqrs
+    working_dir: /home/cqrs
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./cqrs:/home/cqrs
+    command: sh
+    networks:
+      - app-network
+    ports:
+      - "3005:3000"
+
   web:
     build:
       context: ./web

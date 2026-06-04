@@ -15,8 +15,8 @@ const PRIVATE_KEY = fs.readFileSync(
 );
 
 comprar('producto1');
-//comprar('producto2');
-//comprar('producto3');
+comprar('producto2');
+comprar('producto3');
 //comprar('producto4');
 //comprar('producto5');
 

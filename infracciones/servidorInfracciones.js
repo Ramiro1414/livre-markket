@@ -173,6 +173,11 @@ bus.on('producto_reservado', async (payload) => {
 
   compra.historial_estados.push('detectando_infracciones')
 
+  // sleep de 10 segundos para probar compra en proceso en cqrs
+  //await new Promise(resolve =>
+  //  setTimeout(resolve, 10000)
+  //);
+
   compra.hasPublicacion = Math.random() > 0.7 ? true : false;
 
   compra.estado = 'infraccion_detectada';
