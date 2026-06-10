@@ -16,19 +16,31 @@ const options = {
 
 const bus = new EventEmitter();
 
-// ==================================================
-// producto_reservado
-// ==================================================
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.post('/infracciones', (req, res) => {
+
+  const { evento } = req.body;
+
+  if (bus.listenerCount(evento) === 0) {
+
+    return res.status(400).json({
+      error: `Evento no soportado: ${evento}`
+    });
+  }
+
+  res.status(200).json({
+    mensaje: 'Evento recibido'
+  });
+
+  bus.emit(evento, req.body);
+});
 
 bus.on('producto_reservado', async (payload) => {
 
   let { compra } = payload;
-
-  console.log(`Detectando infracciones para compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
 
   compra.estado = 'detectando_infracciones';
 
@@ -39,12 +51,6 @@ bus.on('producto_reservado', async (payload) => {
   compra.estado = 'infraccion_detectada';
 
   compra.historial_estados.push('infraccion_detectada');
-
-  console.log(`Resultado infracción compra ${compra.id}: ${compra.hasPublicacion}`);
-
-  // ==========================================
-  // evento hacia Compras
-  // ==========================================
 
   try {
 
@@ -64,39 +70,6 @@ bus.on('producto_reservado', async (payload) => {
     console.log(`Error comunicando con Compras`);
   }
 });
-
-// ==================================================
-// Endpoint único
-// ==================================================
-
-app.post('/infracciones', (req, res) => {
-
-  const { evento } = req.body;
-
-  // responder primero
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
-
-  console.log(`Evento recibido: ${evento}`);
-
-  if (bus.listenerCount(evento) === 0) {
-
-    return res.status(400).json({
-      error: `Evento no soportado: ${evento}`
-    });
-  }
-
-  bus.emit(evento, req.body);
-});
-
-// ==================================================
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// ==================================================
 
 const PORT = 3000;
 https.createServer(options, app).listen(PORT, () => {

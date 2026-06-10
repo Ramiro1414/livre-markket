@@ -8,16 +8,12 @@ const app = express();
 const EventEmitter = require('events');
 const bus = new EventEmitter();
 
-const ComprasService = require('./servicios/compras');
-
 app.use(express.json());
 
 const options = {
   key: fs.readFileSync('./certs/compras.key'),
   cert: fs.readFileSync('./certs/compras.crt')
 };
-
-const comprasService = new ComprasService();
 
 // "Base de datos" en memoria
 const compras = {};
@@ -32,12 +28,17 @@ app.post('/compras', (req, res) => {
 
   const { evento } = req.body;
 
-  // responder primero
+  if (bus.listenerCount(evento) === 0) {
+
+    return res.status(400).json({
+      error: `Evento no soportado: ${evento}`
+    });
+  }
+
   res.status(200).json({
     mensaje: 'Evento recibido'
   });
 
-  // procesar después
   bus.emit(evento, req.body);
 });
 
@@ -45,35 +46,15 @@ bus.on('producto_enviado', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Finalizando compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'compra_confirmada_en_proceso_de_envio';
 
   compra.historial_estados.push(
     'compra_confirmada_en_proceso_de_envio'
   );
 
-  // ==========================================
-  // guardar localmente
-  // ==========================================
-
   compras[compra.id] = compra;
 
-  console.log(`Compra ${compra.id} almacenada localmente`);
-
-  console.log(`Compra ${compra.id} finalizada`);
-
-  console.log('===============================================');
-
-  console.log(JSON.stringify(compra, null, 2));
-
-  // ==========================================
-  // emitir evento final
-  // ==========================================
+  console.log(`Compra ${compra.id} confirmada y en proceso de envío`);
 
   const eventoFinal = {
     evento: 'compra_confirmada_en_proceso_de_envio',
@@ -108,10 +89,6 @@ bus.on('pago_rechazado', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Pago rechazado para compra ${compra.id}`);
-
-  console.log(`Cancelando pedido para compra ${compra.id}`);
-
   cancelar_compra(compra)
 });
 
@@ -119,27 +96,11 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
   let { compra } = payload;
 
-  console.log(`Finalizando cancelación de compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'compra_cancelada';
 
   compra.historial_estados.push('compra_cancelada');
 
   compras[compra.id] = compra
-
-  console.log(`Compra ${compra.id} cancelada`);
-
-  console.log('===============================================');
-
-  console.log(JSON.stringify(compra, null, 2));
-
-  // ==========================================
-  // emitir evento final
-  // ==========================================
 
   const eventoFinal = {
     evento: 'compra_cancelada',
@@ -170,7 +131,6 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
 });
 
-// Listeners de eventos
 bus.on('producto_seleccionado', async (payload) => {
 
   const { producto } = payload;
@@ -183,8 +143,6 @@ bus.on('producto_seleccionado', async (payload) => {
   };
 
   compras[compra.id] = compra;
-
-  console.log(`Nuevo pedido generado`);
 
   // Emitir evento a Publicaciones
   await fetch('https://publicaciones:3000/publicaciones', {
@@ -204,11 +162,7 @@ bus.on('envio_calculado', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento envio_calculado recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -224,11 +178,7 @@ bus.on('forma_pago_seleccionada', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento forma_pago_seleccionada recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -244,11 +194,7 @@ bus.on('infraccion_detectada', async (payload) => {
 
   let compra = mergearCompra(payload.compra);
 
-  console.log(`Evento infraccion_detectada recibido`);
-
   if (fanInCompleto(compra)) {
-
-    console.log(`Fan-in alcanzado para compra ${compra.id}`);
 
     // si hay infraccion
     if (compra.hasPublicacion) {
@@ -293,21 +239,10 @@ function fanInCompleto(compra) {
 }
 
 async function continuar_flujo(compra) {
-  console.log(`Confirmando compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
 
   compra.estado = 'compra_confirmada';
 
   compra.historial_estados.push('compra_confirmada');
-
-  console.log(`Compra ${compra.id} confirmada`);
-
-  // ==========================================
-  // evento hacia Pagos
-  // ==========================================
 
   try {
 
@@ -331,21 +266,9 @@ async function continuar_flujo(compra) {
 
 async function cancelar_compra(compra) {
 
-  console.log(`Cancelando pedido para compra ${compra.id}`);
-
-  // ==========================================
-  // lógica de negocio
-  // ==========================================
-
   compra.estado = 'pedido_cancelado';
 
   compra.historial_estados.push('pedido_cancelado');
-
-  console.log(`Pedido cancelado para compra ${compra.id}`);
-
-  // ==========================================
-  // evento hacia Publicaciones
-  // ==========================================
 
   try {
 

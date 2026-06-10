@@ -4,3 +4,11 @@ infracciones/certs/infracciones.key
 pagos/certs/pagos.key
 publicaciones/certs/publicaciones.key
 infracciones/certs/infracciones.key
+compras/node_modules/
+envios/node_modules/
+infracciones/node_modules/
+pagos/node_modules/
+publicaciones/node_modules/ 
+web/node_modules/
+startup-rabbit
+cqrs
