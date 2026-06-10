@@ -42,6 +42,19 @@ bus.on('pago_autorizado', async (payload) => {
 
   let { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'autorizando_pago';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'autorizando_pago'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
   compra.estado = 'enviando_producto';
 
   compra.historial_estados.push('enviando_producto');
@@ -69,6 +82,23 @@ bus.on('producto_reservado', async (payload) => {
 
   const { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'producto_reservado';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'producto_reservado'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
+  compra.estado = 'solicitando_forma_entrega';
+
+  compra.historial_estados.push('solicitando_forma_entrega');
+
   try {
 
     await fetch('https://web:3000/web', {
@@ -92,9 +122,18 @@ bus.on('forma_entrega_seleccionada', async (payload) => {
 
   let { compra } = payload;
 
-  compra.estado = 'forma_entrega_seleccionada';
+  const estadoValido =
+    compra.estado === 'forma_entrega_seleccionada';
 
-  compra.historial_estados.push('forma_entrega_seleccionada');
+  const historialValido =
+    compra.historial_estados.includes(
+      'forma_entrega_seleccionada'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
 
   if (compra.forma_entrega === 'correo')
     compra.costo = Math.floor(Math.random() * 1000);

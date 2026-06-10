@@ -42,6 +42,19 @@ bus.on('producto_reservado', async (payload) => {
 
   let { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'producto_reservado';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'producto_reservado'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
   compra.estado = 'detectando_infracciones';
 
   compra.historial_estados.push('detectando_infracciones')

@@ -62,6 +62,19 @@ bus.on('pedido_cancelado', async (payload) => {
 
   let { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'pedido_cancelado';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'pedido_cancelado'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
   compra.estado = 'reserva_producto_cancelada';
 
   compra.historial_estados.push('reserva_producto_cancelada');
@@ -88,6 +101,19 @@ bus.on('pedido_cancelado', async (payload) => {
 bus.on('nuevo_pedido_creado', (payload) => {
 
   const { compra } = payload;
+
+  const estadoValido =
+    compra.estado === 'pedido_generado';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'pedido_generado'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
 
   compra.estado = 'producto_reservado';
 

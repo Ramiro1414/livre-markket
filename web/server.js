@@ -89,7 +89,24 @@ bus.on('forma_entrega_solicitada', async (payload) => {
 
   const { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'solicitando_forma_entrega';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'solicitando_forma_entrega'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
   compra.forma_entrega = randomFormaEntrega();
+
+  compra.estado = 'forma_entrega_seleccionada';
+
+  compra.historial_estados.push('forma_entrega_seleccionada');
 
   try {
 
@@ -114,8 +131,26 @@ bus.on('forma_pago_solicitada', async (payload) => {
 
   const { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'solicitando_forma_pago';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'solicitando_forma_pago'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
   compra.medio_pago =
     Math.random() > 0.5 ? 'tarjeta' : 'efectivo';
+
+  compra.estado = 'forma_pago_seleccionada';
+
+  compra.historial_estados.push('forma_pago_seleccionada');
+  
   try {
 
     await fetch('https://pagos:3000/pagos', {

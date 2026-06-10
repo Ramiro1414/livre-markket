@@ -42,6 +42,19 @@ bus.on('compra_confirmada', async (payload) => {
 
   let { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'compra_confirmada';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'compra_confirmada'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
   compra.estado = 'autorizando_pago';
 
   compra.historial_estados.push('autorizando_pago');
@@ -95,6 +108,23 @@ bus.on('producto_reservado', async (payload) => {
 
   const { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'producto_reservado';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'producto_reservado'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
+  compra.estado = 'solicitando_forma_pago';
+
+  compra.historial_estados.push('solicitando_forma_pago');
+
   try {
 
     await fetch('https://web:3000/web', {
@@ -118,9 +148,18 @@ bus.on('forma_pago_seleccionada', async (payload) => {
 
   let { compra } = payload;
 
-  compra.estado = 'forma_pago_seleccionada';
+  const estadoValido =
+    compra.estado === 'forma_pago_seleccionada';
 
-  compra.historial_estados.push('forma_pago_seleccionada');
+  const historialValido =
+    compra.historial_estados.includes(
+      'forma_pago_seleccionada'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
 
   try {
 

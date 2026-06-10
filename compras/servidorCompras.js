@@ -46,15 +46,34 @@ bus.on('producto_enviado', async (payload) => {
 
   let { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'enviando_producto';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'enviando_producto'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
   compra.estado = 'compra_confirmada_en_proceso_de_envio';
 
   compra.historial_estados.push(
     'compra_confirmada_en_proceso_de_envio'
   );
 
-  compras[compra.id] = compra;
+  save(compra)
 
-  console.log(`Compra ${compra.id} confirmada y en proceso de envío`);
+  // debug
+  const compraActual = findById(compra.id);
+
+  console.log(
+    'Compra recuperada:',
+    JSON.stringify(compraActual, null, 2)
+  );
 
   const eventoFinal = {
     evento: 'compra_confirmada_en_proceso_de_envio',
@@ -96,11 +115,32 @@ bus.on('reserva_producto_cancelada', async (payload) => {
 
   let { compra } = payload;
 
+  const estadoValido =
+    compra.estado === 'reserva_producto_cancelada';
+
+  const historialValido =
+    compra.historial_estados.includes(
+      'reserva_producto_cancelada'
+    );
+
+  if (!estadoValido || !historialValido) {
+
+    return;
+  }
+
   compra.estado = 'compra_cancelada';
 
   compra.historial_estados.push('compra_cancelada');
 
-  compras[compra.id] = compra
+  save(compra)
+
+  // debug
+  const compraActual = findById(compra.id);
+
+  console.log(
+    'Compra recuperada:',
+    JSON.stringify(compraActual, null, 2)
+  );
 
   const eventoFinal = {
     evento: 'compra_cancelada',
@@ -142,7 +182,7 @@ bus.on('producto_seleccionado', async (payload) => {
     historial_estados: ['pedido_generado']
   };
 
-  compras[compra.id] = compra;
+  save(compra)
 
   // Emitir evento a Publicaciones
   await fetch('https://publicaciones:3000/publicaciones', {
@@ -288,6 +328,19 @@ async function cancelar_compra(compra) {
     console.log(`Error comunicando con Publicaciones`);
   }
   
+}
+
+function save(compra) {
+
+  compras[compra.id] = {
+    ...(compras[compra.id] || {}),
+    ...compra
+  };
+
+}
+
+function findById(id) {
+  return compras[id];
 }
 
 const PORT = 3000;
