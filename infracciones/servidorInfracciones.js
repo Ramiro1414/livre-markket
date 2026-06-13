@@ -31,60 +31,35 @@ app.post('/infracciones', (req, res) => {
     });
   }
 
-  res.status(200).json({
-    mensaje: 'Evento recibido'
+  // res.status(200).json({
+  //   mensaje: 'Evento recibido'
+  // });
+
+  bus.emit(evento, req.body, res);
+});
+
+bus.on('detectar_infracciones', async (payload, res) => {
+
+  const hasPublicacion = randomInfraccion();
+
+  return res.status(200).json({
+    hasPublicacion
   });
 
-  bus.emit(evento, req.body);
 });
 
-bus.on('producto_reservado', async (payload) => {
+function randomInfraccion() {
 
-  let { compra } = payload;
+  hasPublicacion = Math.random() > 0.7 ? true : false;
 
-  const estadoValido =
-    compra.estado === 'producto_reservado';
+  return hasPublicacion;
 
-  const historialValido =
-    compra.historial_estados.includes(
-      'producto_reservado'
-    );
-
-  if (!estadoValido || !historialValido) {
-
-    return;
-  }
-
-  compra.estado = 'detectando_infracciones';
-
-  compra.historial_estados.push('detectando_infracciones')
-
-  compra.hasPublicacion = Math.random() > 0.7 ? true : false;
-
-  compra.estado = 'infraccion_detectada';
-
-  compra.historial_estados.push('infraccion_detectada');
-
-  try {
-
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'infraccion_detectada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Compras`);
-  }
-});
+}
 
 const PORT = 3000;
-https.createServer(options, app).listen(PORT, () => {
-  console.log(`Servidor de infracciones HTTPS escuchando en puerto ${PORT}`);
+// https.createServer(options, app).listen(PORT, () => {
+//   console.log(`Servidor de infracciones HTTPS escuchando en puerto ${PORT}`);
+// });
+app.listen(PORT, () => {
+  console.log(`Servidor de infracciones HTTP escuchando en puerto ${PORT}`);
 });

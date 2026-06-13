@@ -91,3 +91,17 @@ services:
       - "8080:3000"
     depends_on:
       - compras
+
+  wso2-mi:
+    image: wso2/wso2mi:4.5.0
+    container_name: wso2-mi
+    restart: always
+
+    ports:
+      - "8290:8290"
+      - "8253:8253"
+      - "9164:9164"
+
+    volumes:
+      - ./wso2/logs:/home/wso2carbon/wso2mi-4.5.0/repository/logs
+      - ./wso2/carbonapps:/home/wso2carbon/wso2mi-4.5.0/repository/deployment/server/carbonapps

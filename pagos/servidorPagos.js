@@ -31,156 +31,35 @@ app.post('/pagos', (req, res) => {
     });
   }
 
-  res.status(200).json({
-    mensaje: 'Evento recibido'
+  // res.status(200).json({
+  //   mensaje: 'Evento recibido'
+  // });
+
+  bus.emit(evento, req.body, res);
+});
+
+bus.on('autorizar_pago', async (payload, res) => {
+
+  const estado_pago = randomEstadoPago();
+
+  return res.status(200).json({
+    estado_pago
   });
 
-  bus.emit(evento, req.body);
 });
 
-bus.on('compra_confirmada', async (payload) => {
+function randomEstadoPago() {
 
-  let { compra } = payload;
+  estado_pago = Math.random() > 0.7 ? 'rechazado' : 'autorizado';
 
-  const estadoValido =
-    compra.estado === 'compra_confirmada';
+  return estado_pago;
 
-  const historialValido =
-    compra.historial_estados.includes(
-      'compra_confirmada'
-    );
-
-  if (!estadoValido || !historialValido) {
-
-    return;
-  }
-
-  compra.estado = 'autorizando_pago';
-
-  compra.historial_estados.push('autorizando_pago');
-
-  compra.estado_pago =
-    Math.random() > 0.7 ? 'rechazado' : 'aprobado';
-
-  if (compra.estado_pago === 'rechazado') {
-
-    try {
-
-      await fetch('https://compras:3000/compras', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          evento: 'pago_rechazado',
-          compra
-        })
-      });
-
-    } catch (error) {
-
-      console.log(`Error comunicando con Compras`);
-    }
-
-    return;
-  }
-
-  try {
-
-    await fetch('https://envios:3000/envios', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'pago_autorizado',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Envios`);
-  }
-});
-
-bus.on('producto_reservado', async (payload) => {
-
-  const { compra } = payload;
-
-  const estadoValido =
-    compra.estado === 'producto_reservado';
-
-  const historialValido =
-    compra.historial_estados.includes(
-      'producto_reservado'
-    );
-
-  if (!estadoValido || !historialValido) {
-
-    return;
-  }
-
-  compra.estado = 'solicitando_forma_pago';
-
-  compra.historial_estados.push('solicitando_forma_pago');
-
-  try {
-
-    await fetch('https://web:3000/web', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'forma_pago_solicitada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Web`);
-  }
-});
-
-bus.on('forma_pago_seleccionada', async (payload) => {
-
-  let { compra } = payload;
-
-  const estadoValido =
-    compra.estado === 'forma_pago_seleccionada';
-
-  const historialValido =
-    compra.historial_estados.includes(
-      'forma_pago_seleccionada'
-    );
-
-  if (!estadoValido || !historialValido) {
-
-    return;
-  }
-
-  try {
-
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'forma_pago_seleccionada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Compras`);
-  }
-});
+}
 
 const PORT = 3000;
-https.createServer(options, app).listen(PORT, () => {
-  console.log(`Servidor de pagos HTTPS escuchando en puerto ${PORT}`);
+// https.createServer(options, app).listen(PORT, () => {
+//   console.log(`Servidor de pagos HTTPS escuchando en puerto ${PORT}`);
+// });
+app.listen(PORT, () => {
+  console.log(`Servidor de pagos HTTP escuchando en puerto ${PORT}`);
 });

@@ -35,128 +35,37 @@ app.post('/publicaciones', async (req, res) => {
 
   }
 
-  res.status(200).json({
-    mensaje: 'Evento recibido'
-  });
+  // res.status(200).json({
+  //   mensaje: 'Evento recibido'
+  // });
 
   bus.emit(evento, req.body, res);
 });
 
-bus.on('compra_cancelada', async (payload) => {
+bus.on('reservar_producto', (payload, res) => {
 
-  const { compra } = payload;
+  const estado = 'producto_reservado';
 
-  compras[compra.id] = compra;
-
-});
-
-bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
-
-  const { compra } = payload;
-
-  compras[compra.id] = compra;
-
-});
-
-bus.on('pedido_cancelado', async (payload) => {
-
-  let { compra } = payload;
-
-  const estadoValido =
-    compra.estado === 'pedido_cancelado';
-
-  const historialValido =
-    compra.historial_estados.includes(
-      'pedido_cancelado'
-    );
-
-  if (!estadoValido || !historialValido) {
-
-    return;
-  }
-
-  compra.estado = 'reserva_producto_cancelada';
-
-  compra.historial_estados.push('reserva_producto_cancelada');
-
-  try {
-
-    await fetch('https://compras:3000/compras', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'reserva_producto_cancelada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Compras`);
-  }
-});
-
-bus.on('nuevo_pedido_creado', (payload) => {
-
-  const { compra } = payload;
-
-  const estadoValido =
-    compra.estado === 'pedido_generado';
-
-  const historialValido =
-    compra.historial_estados.includes(
-      'pedido_generado'
-    );
-
-  if (!estadoValido || !historialValido) {
-
-    return;
-  }
-
-  compra.estado = 'producto_reservado';
-
-  compra.historial_estados.push('producto_reservado');
-
-  const evento = {
-    evento: 'producto_reservado',
-    compra
-  };
-
-  fetch('https://envios:3000/envios', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(evento)
-  }).catch(error => {
-    console.log(`Error comunicando con Envios`);
+  return res.status(200).json({
+    estado
   });
 
-  fetch('https://pagos:3000/pagos', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(evento)
-  }).catch(error => {
-    console.log(`Error comunicando con Pagos`);
-  });
+});
 
-  fetch('https://infracciones:3000/infracciones', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(evento)
-  }).catch(error => {
-    console.log(`Error comunicando con Infracciones`);
+bus.on('cancelar_reserva_producto', async (payload, res) => {
+
+  const estado = 'producto_liberado';
+
+  return res.status(200).json({
+    estado
   });
 
 });
 
 const PORT = 3000;
-https.createServer(options, app).listen(PORT, () => {
-  console.log(`Servidor de publicaciones HTTPS escuchando en puerto ${PORT}`);
+// https.createServer(options, app).listen(PORT, () => {
+//   console.log(`Servidor de publicaciones HTTPS escuchando en puerto ${PORT}`);
+// });
+app.listen(PORT, () => {
+  console.log(`Servidor de publicaciones HTTP escuchando en puerto ${PORT}`);
 });

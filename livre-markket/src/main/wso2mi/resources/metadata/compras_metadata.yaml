@@ -1,0 +1,10 @@
+---
+key: "compras-1.0.0"
+name : "compras"
+displayName : "compras"
+description: "compras"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/compras"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

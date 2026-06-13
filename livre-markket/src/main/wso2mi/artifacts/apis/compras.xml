@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api context="/compras" name="compras" xmlns="http://ws.apache.org/ns/synapse">
+    <resource methods="POST" uri-template="/iniciar-compra">
+        <inSequence>
+            <variable name="producto" type="STRING" expression="${payload.producto}"/>
+            <log category="INFO" logMessageID="false" logFullPayload="true">
+                <message>Producto seleccionado. Iniciando flujo de compra. El producto es:${vars.producto}</message>
+            </log>
+            <http.post configKey="ServidorCompras">
+                <relativePath>/compras</relativePath>
+                <headers>[]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>'{"producto": "${vars.producto}", "evento": "crear_pedido"}'</requestBodyJson>
+                <forceScAccepted>false</forceScAccepted>
+                <disableChunking>false</disableChunking>
+                <forceHttp10>false</forceHttp10>
+                <noKeepAlive>false</noKeepAlive>
+                <forcePostPutNobody>false</forcePostPutNobody>
+                <responseVariable>solicitud_crear_pedido</responseVariable>
+                <overwriteBody>true</overwriteBody>
+            </http.post>
+            <variable name="compra" type="JSON" expression="${payload}"/>
+            <log category="INFO" logMessageID="false" logFullPayload="true">
+                <message>Nueva compra creada: ${vars.compra}</message>
+            </log>
+            <http.post configKey="ServidorPublicaciones">
+                <relativePath>/publicaciones</relativePath>
+                <headers>[]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>'{"producto": "${vars.producto}","evento": "reservar_producto"}'</requestBodyJson>
+                <forceScAccepted>false</forceScAccepted>
+                <disableChunking>false</disableChunking>
+                <forceHttp10>false</forceHttp10>
+                <noKeepAlive>false</noKeepAlive>
+                <forcePostPutNobody>false</forcePostPutNobody>
+                <responseVariable>solicitud_reservar_producto</responseVariable>
+                <overwriteBody>true</overwriteBody>
+            </http.post>
+            <http.post configKey="ServidorWeb">
+                <relativePath>/web</relativePath>
+                <headers>[]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>'{"evento": "solicitar_forma_entrega"}'</requestBodyJson>
+                <forceScAccepted>false</forceScAccepted>
+                <disableChunking>false</disableChunking>
+                <forceHttp10>false</forceHttp10>
+                <noKeepAlive>false</noKeepAlive>
+                <forcePostPutNobody>false</forcePostPutNobody>
+                <responseVariable>solicitud_solicitar_forma_entrega</responseVariable>
+                <overwriteBody>true</overwriteBody>
+            </http.post>
+            <variable name="forma_entrega" type="JSON" expression="${payload}"/>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>La forma de entrega selecciona es: ${vars.forma_entrega}</message>
+            </log>
+            <http.post configKey="ServidorEnvios">
+                <relativePath>/envios</relativePath>
+                <headers>[]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>'{"evento": "calcular_costo_envio","forma_entrega": "${vars.forma_entrega.forma_entrega}"}'</requestBodyJson>
+                <forceScAccepted>false</forceScAccepted>
+                <disableChunking>false</disableChunking>
+                <forceHttp10>false</forceHttp10>
+                <noKeepAlive>false</noKeepAlive>
+                <forcePostPutNobody>false</forcePostPutNobody>
+                <responseVariable>solicitud_calcular_costo_envio</responseVariable>
+                <overwriteBody>true</overwriteBody>
+            </http.post>
+            <variable name="costo_envio" type="JSON" expression="${payload}"/>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>Costo envio calculado: ${vars.costo_envio}</message>
+            </log>
+            <http.post configKey="ServidorWeb">
+                <relativePath>/web</relativePath>
+                <headers>[]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>'{"evento": "solicitar_forma_pago"}'</requestBodyJson>
+                <forceScAccepted>false</forceScAccepted>
+                <disableChunking>false</disableChunking>
+                <forceHttp10>false</forceHttp10>
+                <noKeepAlive>false</noKeepAlive>
+                <forcePostPutNobody>false</forcePostPutNobody>
+                <responseVariable>solicitud_solicitar_forma_pago</responseVariable>
+                <overwriteBody>true</overwriteBody>
+            </http.post>
+            <variable name="forma_pago" type="JSON" expression="${payload}"/>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>Forma de pago seleccionada: ${vars.forma_pago}</message>
+            </log>
+            <http.post configKey="ServidorInfracciones">
+                <relativePath>/infracciones</relativePath>
+                <headers>[]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>'{"evento": "detectar_infracciones"}'</requestBodyJson>
+                <forceScAccepted>false</forceScAccepted>
+                <disableChunking>false</disableChunking>
+                <forceHttp10>false</forceHttp10>
+                <noKeepAlive>false</noKeepAlive>
+                <forcePostPutNobody>false</forcePostPutNobody>
+                <responseVariable>solicitud_detectar_infracciones</responseVariable>
+                <overwriteBody>true</overwriteBody>
+            </http.post>
+            <variable name="hasPublicaciones" type="JSON" expression="${payload}"/>
+            <log category="INFO" logMessageID="false" logFullPayload="false">
+                <message>La deteccion de infracciones finalizo: ${vars.hasPublicaciones}</message>
+            </log>
+            <filter description="Verifico si la compra tiene infraccion" xpath="${vars.hasPublicaciones.hasPublicacion}">
+                <then>
+                    <http.post configKey="ServidorPublicaciones">
+                        <relativePath>/publicaciones</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "cancelar_reservar_producto"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>solicitud_cancelar_reservar_producto</responseVariable>
+                        <overwriteBody>true</overwriteBody>
+                    </http.post>
+                    <http.post configKey="ServidorCompras">
+                        <relativePath>/compras</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "cancelar_compra"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>solicitud_cancelar_compra</responseVariable>
+                        <overwriteBody>true</overwriteBody>
+                    </http.post>
+                    <log category="INFO" logMessageID="false" logFullPayload="false">
+                        <message>La compra fue cancelada por infraccion</message>
+                    </log>
+                </then>
+                <else>
+                    <http.post configKey="ServidorCompras">
+                        <relativePath>/compras</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "confirmar_compra"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>solicitud_confirmar_compra</responseVariable>
+                        <overwriteBody>true</overwriteBody>
+                    </http.post>
+                    <http.post configKey="ServidorPagos">
+                        <relativePath>/pagos</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "autorizar_pago"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>solicitud_autorizar_pago</responseVariable>
+                        <overwriteBody>true</overwriteBody>
+                    </http.post>
+                    <variable name="estado_pago" type="JSON" expression="${payload}"/>
+                    <log category="INFO" logMessageID="false" logFullPayload="false">
+                        <message>Autorizacion de pago de la compra: ${vars.estado_pago.estado_pago}</message>
+                    </log>
+                    <switch source="${vars.estado_pago.estado_pago}">
+                        <case regex="rechazado">
+                            <http.post configKey="ServidorPublicaciones">
+                                <relativePath>/publicaciones</relativePath>
+                                <headers>[]</headers>
+                                <requestBodyType>JSON</requestBodyType>
+                                <requestBodyJson>'{"evento": "cancelar_reservar_producto"}'</requestBodyJson>
+                                <forceScAccepted>false</forceScAccepted>
+                                <disableChunking>false</disableChunking>
+                                <forceHttp10>false</forceHttp10>
+                                <noKeepAlive>false</noKeepAlive>
+                                <forcePostPutNobody>false</forcePostPutNobody>
+                                <responseVariable>solicitud_cancelar_reservar_producto_2</responseVariable>
+                                <overwriteBody>true</overwriteBody>
+                            </http.post>
+                            <http.post configKey="ServidorCompras">
+                                <relativePath>/compras</relativePath>
+                                <headers>[]</headers>
+                                <requestBodyType>JSON</requestBodyType>
+                                <requestBodyJson>'{"evento": "cancelar_compra"}'</requestBodyJson>
+                                <forceScAccepted>false</forceScAccepted>
+                                <disableChunking>false</disableChunking>
+                                <forceHttp10>false</forceHttp10>
+                                <noKeepAlive>false</noKeepAlive>
+                                <forcePostPutNobody>false</forcePostPutNobody>
+                                <responseVariable>solicitud_cancelar_compra_2</responseVariable>
+                                <overwriteBody>true</overwriteBody>
+                            </http.post>
+                            <log category="INFO" logMessageID="false" logFullPayload="false">
+                                <message>Compra cancelada por pago rechazado</message>
+                            </log>
+                        </case>
+                        <case regex="autorizado">
+                            <http.post configKey="ServidorEnvios">
+                                <relativePath>/envios</relativePath>
+                                <headers>[]</headers>
+                                <requestBodyType>JSON</requestBodyType>
+                                <requestBodyJson>'{"evento": "enviar_producto"}'</requestBodyJson>
+                                <forceScAccepted>false</forceScAccepted>
+                                <disableChunking>false</disableChunking>
+                                <forceHttp10>false</forceHttp10>
+                                <noKeepAlive>false</noKeepAlive>
+                                <forcePostPutNobody>false</forcePostPutNobody>
+                                <responseVariable>solicitud_enviar_producto</responseVariable>
+                                <overwriteBody>true</overwriteBody>
+                            </http.post>
+                            <http.post configKey="ServidorCompras">
+                                <relativePath>/compras</relativePath>
+                                <headers>[]</headers>
+                                <requestBodyType>JSON</requestBodyType>
+                                <requestBodyJson>'{"evento": "finalizar_compra"}'</requestBodyJson>
+                                <forceScAccepted>false</forceScAccepted>
+                                <disableChunking>false</disableChunking>
+                                <forceHttp10>false</forceHttp10>
+                                <noKeepAlive>false</noKeepAlive>
+                                <forcePostPutNobody>false</forcePostPutNobody>
+                                <responseVariable>solicitud_finalizar_compra</responseVariable>
+                                <overwriteBody>true</overwriteBody>
+                            </http.post>
+                            <log category="INFO" logMessageID="false" logFullPayload="false">
+                                <message>Compra confirmada y en proceso de envio</message>
+                            </log>
+                        </case>
+                        <default></default>
+                    </switch>
+                </else>
+            </filter>
+            <respond/>
+        </inSequence>
+        <faultSequence>
+        </faultSequence>
+    </resource>
+</api>

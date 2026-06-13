@@ -28,13 +28,12 @@ app.post('/simular-compra', async (req, res) => {
 
   try {
 
-    await fetch('https://compras:3000/compras', {
+    await fetch('http://wso2-mi:8290/iniciar-compra', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        evento: 'producto_seleccionado',
         producto
       })
     });
@@ -46,7 +45,7 @@ app.post('/simular-compra', async (req, res) => {
   } catch (error) {
 
     return res.status(500).json({
-      error: 'Error comunicando con Compras'
+      error: 'Error comunicando con ESB'
     });
   }
 });
@@ -62,112 +61,31 @@ app.post('/web', (req, res) => {
     });
   }
 
-  res.status(200).json({
-    mensaje: 'Evento recibido'
+  // res.status(200).json({
+  //   mensaje: 'Evento recibido'
+  // });
+
+  bus.emit(evento, req.body, res);
+});
+
+bus.on('solicitar_forma_entrega', (payload, res) => {
+
+  const forma_entrega = randomFormaEntrega();
+
+  return res.status(200).json({
+    forma_entrega
   });
 
-  bus.emit(evento, req.body);
 });
 
-bus.on('compra_cancelada', async (payload) => {
+bus.on('solicitar_forma_pago', (payload, res) => {
 
-  const { compra } = payload;
+  const forma_pago = randomFormaPago();
 
-  compras[compra.id] = compra;
+  return res.status(200).json({
+    forma_pago
+  });
 
-});
-
-bus.on('compra_confirmada_en_proceso_de_envio', async (payload) => {
-
-  const { compra } = payload;
-
-  compras[compra.id] = compra;
-
-});
-
-bus.on('forma_entrega_solicitada', async (payload) => {
-
-  const { compra } = payload;
-
-  const estadoValido =
-    compra.estado === 'solicitando_forma_entrega';
-
-  const historialValido =
-    compra.historial_estados.includes(
-      'solicitando_forma_entrega'
-    );
-
-  if (!estadoValido || !historialValido) {
-
-    return;
-  }
-
-  compra.forma_entrega = randomFormaEntrega();
-
-  compra.estado = 'forma_entrega_seleccionada';
-
-  compra.historial_estados.push('forma_entrega_seleccionada');
-
-  try {
-
-    await fetch('https://envios:3000/envios', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'forma_entrega_seleccionada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Envios`);
-  }
-});
-
-bus.on('forma_pago_solicitada', async (payload) => {
-
-  const { compra } = payload;
-
-  const estadoValido =
-    compra.estado === 'solicitando_forma_pago';
-
-  const historialValido =
-    compra.historial_estados.includes(
-      'solicitando_forma_pago'
-    );
-
-  if (!estadoValido || !historialValido) {
-
-    return;
-  }
-
-  compra.medio_pago =
-    Math.random() > 0.5 ? 'tarjeta' : 'efectivo';
-
-  compra.estado = 'forma_pago_seleccionada';
-
-  compra.historial_estados.push('forma_pago_seleccionada');
-  
-  try {
-
-    await fetch('https://pagos:3000/pagos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        evento: 'forma_pago_seleccionada',
-        compra
-      })
-    });
-
-  } catch (error) {
-
-    console.log(`Error comunicando con Pagos`);
-  }
 });
 
 function randomFormaEntrega() {
@@ -177,7 +95,17 @@ function randomFormaEntrega() {
   return opciones[Math.floor(Math.random() * opciones.length)];
 }
 
+function randomFormaPago() {
+
+  const opciones = ['tarjeta', 'efectivo'];
+
+  return opciones[Math.floor(Math.random() * opciones.length)];
+}
+
 const PORT = 3000;
-https.createServer(options, app).listen(PORT, () => {
-  console.log(`Servidor web HTTPS escuchando en puerto ${PORT}`);
+// https.createServer(options, app).listen(PORT, () => {
+//   console.log(`Servidor web HTTPS escuchando en puerto ${PORT}`);
+// });
+app.listen(PORT, () => {
+  console.log(`Servidor web HTTP escuchando en puerto ${PORT}`);
 });
