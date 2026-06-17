@@ -16,6 +16,8 @@ const options = {
 
 const bus = new EventEmitter();
 
+const envios = {};
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -50,7 +52,7 @@ bus.on('enviar_producto', async (payload, res) => {
 
 bus.on('calcular_costo_envio', (payload, res) => {
 
-  const { forma_entrega } = payload;
+  const { compra_id, forma_entrega } = payload;
 
   let costo;
 
@@ -58,6 +60,10 @@ bus.on('calcular_costo_envio', (payload, res) => {
     costo = randomCostoEnvio();
   else
     costo = 0;
+
+  envios[compra_id] = {id: compra_id, forma_entrega, costo};
+
+  console.log('envio calculado: ', envios[compra_id]);
 
   return res.status(200).json({
     costo

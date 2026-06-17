@@ -15,7 +15,7 @@ const options = {
 
 const bus = new EventEmitter();
 
-const compras = {};
+const productos = {};
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -44,20 +44,26 @@ app.post('/publicaciones', async (req, res) => {
 
 bus.on('reservar_producto', (payload, res) => {
 
-  const estado = 'producto_reservado';
+  const { compra_id, producto } = payload;
+
+  const estado_producto = 'producto_reservado';
+
+  productos[compra_id] = {id: compra_id, producto, estado_producto};
+
+  console.log('reservando producto: ', productos[compra_id]);
 
   return res.status(200).json({
-    estado
+    estado_producto
   });
 
 });
 
 bus.on('cancelar_reserva_producto', async (payload, res) => {
 
-  const estado = 'producto_liberado';
+  const estado_producto = 'producto_liberado';
 
   return res.status(200).json({
-    estado
+    estado_producto
   });
 
 });

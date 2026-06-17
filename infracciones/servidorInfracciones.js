@@ -16,6 +16,8 @@ const options = {
 
 const bus = new EventEmitter();
 
+const infracciones = {}
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -40,7 +42,13 @@ app.post('/infracciones', (req, res) => {
 
 bus.on('detectar_infracciones', async (payload, res) => {
 
+  const { compra_id } = payload;
+
   const hasPublicacion = randomInfraccion();
+
+  infracciones[compra_id] = {id: compra_id, hasPublicacion};
+
+  console.log('guardando infraccion: ', infracciones[compra_id]);
 
   return res.status(200).json({
     hasPublicacion

@@ -17,6 +17,7 @@ const options = {
 const bus = new EventEmitter();
 
 const compras = {};
+const datos_compra = {};
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -70,7 +71,17 @@ app.post('/web', (req, res) => {
 
 bus.on('solicitar_forma_entrega', (payload, res) => {
 
+  const { compra_id } = payload;
+
   const forma_entrega = randomFormaEntrega();
+
+  datos_compra[compra_id] = {
+	...(datos_compra[compra_id] || {}),
+	id: compra_id,
+	forma_entrega
+  };
+
+  console.log('datos de la compra: ', datos_compra[compra_id]);
 
   return res.status(200).json({
     forma_entrega
@@ -80,7 +91,17 @@ bus.on('solicitar_forma_entrega', (payload, res) => {
 
 bus.on('solicitar_forma_pago', (payload, res) => {
 
+  const { compra_id } = payload;
+
   const forma_pago = randomFormaPago();
+
+  datos_compra[compra_id] = {
+	...(datos_compra[compra_id] || {}),
+	id: compra_id,
+	forma_pago
+  };
+
+  console.log('datos de la compra: ', datos_compra[compra_id]);
 
   return res.status(200).json({
     forma_pago

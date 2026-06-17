@@ -23,6 +23,20 @@
             <log category="INFO" logMessageID="false" logFullPayload="true">
                 <message>Nueva compra creada: ${vars.compra}</message>
             </log>
+            <http.post configKey="ServidorWeb">
+                <relativePath>/web</relativePath>
+                <headers>[]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>'{"evento": "solicitar_forma_entrega", "compra_id": ${vars.compra.id}}'</requestBodyJson>
+                <forceScAccepted>false</forceScAccepted>
+                <disableChunking>false</disableChunking>
+                <forceHttp10>false</forceHttp10>
+                <noKeepAlive>false</noKeepAlive>
+                <forcePostPutNobody>false</forcePostPutNobody>
+                <responseVariable>solicitud_solicitar_forma_entrega</responseVariable>
+                <overwriteBody>true</overwriteBody>
+            </http.post>
+            <variable name="forma_entrega" type="STRING" expression="${payload.forma_entrega}"/>
             <scatter-gather parallel-execution="true" target="Variable" target-variable="resultado_paralelizacion" result-content-type="JSON">
                 <aggregation expression="${payload}"/>
                 <sequence>
@@ -30,7 +44,7 @@
                         <relativePath>/publicaciones</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"producto": "${vars.producto}","evento": "reservar_producto"}'</requestBodyJson>
+                        <requestBodyJson>'{"producto": "${vars.producto}","evento": "reservar_producto", "compra_id": ${vars.compra.id}}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -39,26 +53,12 @@
                         <responseVariable>solicitud_reservar_producto</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
-                    <variable name="estado_producto" type="STRING" expression="${payload.estado}"/>
+                    <variable name="estado_producto" type="STRING" expression="${payload.estado_producto}"/>
                     <log category="INFO" logMessageID="false" logFullPayload="false">
                         <message>Producto reservado</message>
                     </log>
                 </sequence>
                 <sequence>
-                    <http.post configKey="ServidorWeb">
-                        <relativePath>/web</relativePath>
-                        <headers>[]</headers>
-                        <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "solicitar_forma_entrega"}'</requestBodyJson>
-                        <forceScAccepted>false</forceScAccepted>
-                        <disableChunking>false</disableChunking>
-                        <forceHttp10>false</forceHttp10>
-                        <noKeepAlive>false</noKeepAlive>
-                        <forcePostPutNobody>false</forcePostPutNobody>
-                        <responseVariable>solicitud_solicitar_forma_entrega</responseVariable>
-                        <overwriteBody>true</overwriteBody>
-                    </http.post>
-                    <variable name="forma_entrega" type="STRING" expression="${payload.forma_entrega}"/>
                     <log category="INFO" logMessageID="false" logFullPayload="false">
                         <message>Forma de entrega seleccionada: ${vars.forma_entrega}</message>
                     </log>
@@ -66,7 +66,7 @@
                         <relativePath>/envios</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "calcular_costo_envio","forma_entrega":"${vars.forma_entrega}"}'</requestBodyJson>
+                        <requestBodyJson>'{"evento":"calcular_costo_envio","forma_entrega":"${vars.forma_entrega}", "compra_id": ${vars.compra.id}}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -75,6 +75,10 @@
                         <responseVariable>solicitud_calcular_costo_envio</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
+
+
+
+
                     <variable name="costo_envio" type="INTEGER" expression="${payload.costo}"/>
                     <log category="INFO" logMessageID="false" logFullPayload="false">
                         <message>Costo de envio calculado: ${vars.costo_envio}</message>
@@ -85,7 +89,7 @@
                         <relativePath>/web</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "solicitar_forma_pago"}'</requestBodyJson>
+                        <requestBodyJson>'{"evento": "solicitar_forma_pago", "compra_id": ${vars.compra.id}}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -94,6 +98,7 @@
                         <responseVariable>solicitud_solicitar_forma_pago</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
+
                     <variable name="forma_pago" type="STRING" expression="${payload.forma_pago}"/>
                     <log category="INFO" logMessageID="false" logFullPayload="false">
                         <message>Forma de pago seleccionada: ${vars.forma_pago}</message>
@@ -104,7 +109,7 @@
                         <relativePath>/infracciones</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "detectar_infracciones"}'</requestBodyJson>
+                        <requestBodyJson>'{"evento": "detectar_infracciones", "compra_id": ${vars.compra.id}}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -113,6 +118,8 @@
                         <responseVariable>solicitud_detectar_infracciones</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
+
+
                     <variable name="hasPublicacion" type="BOOLEAN" expression="${payload.hasPublicacion}"/>
                     <log category="INFO" logMessageID="false" logFullPayload="false">
                         <message>La deteccion de infracciones finalizo, el resultado es: ${vars.hasPublicacion}</message>
@@ -144,7 +151,7 @@ mc.setPayloadJSON(merge)]]></script>
                         <relativePath>/publicaciones</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "cancelar_reservar_producto"}'</requestBodyJson>
+                        <requestBodyJson>'{"evento": "cancelar_reserva_producto"}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -153,21 +160,26 @@ mc.setPayloadJSON(merge)]]></script>
                         <responseVariable>solicitud_cancelar_reservar_producto</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
+                    <variable name="estado_producto" type="STRING" expression="${payload.estado_producto}"/>
+                    <log category="INFO" logMessageID="false" logFullPayload="false">
+                        <message>La compra fue cancelada por infraccion. Detalle:id: ${vars.compra.id}, producto: ${vars.compra.producto}, estado_producto: ${vars.estado_producto}, forma_pago: ${vars.payload_sincronizacion.forma_pago}, costo: ${vars.payload_sincronizacion.costo}, hasPublicacion: ${vars.payload_sincronizacion.hasPublicacion}, estado: ${vars.compra.estado}</message>
+                    </log>
                     <http.post configKey="ServidorCompras">
                         <relativePath>/compras</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "cancelar_compra"}'</requestBodyJson>
+                        <requestBodyJson>'{"evento": "cancelar_compra", "compra": {"id": ${vars.compra.id}}}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
                         <noKeepAlive>false</noKeepAlive>
                         <forcePostPutNobody>false</forcePostPutNobody>
-                        <responseVariable>solicitud_cancelar_compra</responseVariable>
+                        <responseVariable>solicitud_cancelar_compra_infraccion</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
-                    <log category="INFO" logMessageID="false" logFullPayload="false">
-                        <message>La compra fue cancelada por infraccion</message>
+
+                    <log category="INFO" logMessageID="false" logFullPayload="true">
+                        <message>Respuesta de cancelar compra:</message>
                     </log>
                 </then>
                 <else>
@@ -175,7 +187,7 @@ mc.setPayloadJSON(merge)]]></script>
                         <relativePath>/compras</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "confirmar_compra"}'</requestBodyJson>
+                        <requestBodyJson>'{"evento": "confirmar_compra", "compra_id": ${vars.compra.id}}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -184,6 +196,8 @@ mc.setPayloadJSON(merge)]]></script>
                         <responseVariable>solicitud_confirmar_compra</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
+
+
                     <http.post configKey="ServidorPagos">
                         <relativePath>/pagos</relativePath>
                         <headers>[]</headers>
@@ -220,7 +234,7 @@ mc.setPayloadJSON(merge)]]></script>
                                 <relativePath>/compras</relativePath>
                                 <headers>[]</headers>
                                 <requestBodyType>JSON</requestBodyType>
-                                <requestBodyJson>'{"evento": "cancelar_compra"}'</requestBodyJson>
+                                <requestBodyJson>'{"evento": "cancelar_compra", "compra": {"id": ${vars.compra.id}}}'</requestBodyJson>
                                 <forceScAccepted>false</forceScAccepted>
                                 <disableChunking>false</disableChunking>
                                 <forceHttp10>false</forceHttp10>
@@ -229,6 +243,7 @@ mc.setPayloadJSON(merge)]]></script>
                                 <responseVariable>solicitud_cancelar_compra_2</responseVariable>
                                 <overwriteBody>true</overwriteBody>
                             </http.post>
+
                             <log category="INFO" logMessageID="false" logFullPayload="false">
                                 <message>Compra cancelada por pago rechazado</message>
                             </log>
@@ -251,7 +266,7 @@ mc.setPayloadJSON(merge)]]></script>
                                 <relativePath>/compras</relativePath>
                                 <headers>[]</headers>
                                 <requestBodyType>JSON</requestBodyType>
-                                <requestBodyJson>'{"evento": "finalizar_compra"}'</requestBodyJson>
+                                <requestBodyJson>'{"evento": "finalizar_compra", "compra": {"id": ${vars.compra.id}}}'</requestBodyJson>
                                 <forceScAccepted>false</forceScAccepted>
                                 <disableChunking>false</disableChunking>
                                 <forceHttp10>false</forceHttp10>

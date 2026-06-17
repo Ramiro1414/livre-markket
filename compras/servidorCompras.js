@@ -58,46 +58,58 @@ bus.on('crear_pedido', (payload, res) => {
   res.status(200).json(compra);
 });
 
-bus.on('cancelar_compra', async (payload, res) => {
+bus.on('confirmar_compra', async (payload, res) => {
 
-  const estado = 'compra_cancelada';
+  const { compra_id } = payload;
+
+  const compra = findById(compra_id);
+
+  compra.estado = 'compra_confirmada'
+
+  console.log('payload:', payload);
+  console.log('compra:', compra);
+
+  save(compra);
 
   return res.status(200).json({
-    estado
+    compra
+  });
+
+});
+
+bus.on('cancelar_compra', async (payload, res) => {
+
+  //const estado = 'compra_cancelada';
+  const { compra } = payload;
+
+  console.log('payload:', payload);
+  console.log('compra:', compra);
+
+  save(compra);
+
+  return res.status(200).json({
+    compra
   });
 
 });
 
 bus.on('finalizar_compra', async (payload, res) => {
 
-  const estado = 'compra_confirmada_y_en_proceso_de_envio';
+  //const estado = 'compra_confirmada_y_en_proceso_de_envio';
+  const { compra } = payload;
+
+  console.log('payload:', payload);
+  console.log('compra:', compra);
+
+  save(compra);
 
   return res.status(200).json({
-    estado
+    compra
   });
 
 });
 
 // ======= funciones helpers =======
-function mergearCompra(compraActualizada) {
-
-  const compraExistente = compras[compraActualizada.id];
-
-  compras[compraActualizada.id] = {
-    ...compraExistente,
-    ...compraActualizada,
-
-    historial_estados: [
-      ...new Set([
-        ...(compraExistente.historial_estados || []),
-        ...(compraActualizada.historial_estados || [])
-      ])
-    ]
-  };
-
-  return compras[compraActualizada.id];
-}
-
 function save(compra) {
 
   compras[compra.id] = {
