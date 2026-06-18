@@ -44,6 +44,12 @@ bus.on('autorizar_pago', async (payload, res) => {
 
   const { compra_id } = payload;
 
+  if (existePago(compra_id)) {
+    return res.status(400).json({
+      error: 'Ya se autorizo un pago para esta compra'
+    });
+  }
+
   const estado_pago = randomEstadoPago();
 
   pagos[compra_id] = {id: compra_id, estado_pago};
@@ -62,6 +68,10 @@ function randomEstadoPago() {
 
   return estado_pago;
 
+}
+
+function existePago(compra_id) {
+  return pagos[compra_id] !== undefined;
 }
 
 const PORT = 3000;

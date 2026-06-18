@@ -44,6 +44,12 @@ bus.on('detectar_infracciones', async (payload, res) => {
 
   const { compra_id } = payload;
 
+  if (existeInfraccion(compra_id)) {
+    return res.status(400).json({
+      error: 'Ya se detecto una infraccion para esta compra'
+    });
+  }
+
   const hasPublicacion = randomInfraccion();
 
   infracciones[compra_id] = {id: compra_id, hasPublicacion};
@@ -62,6 +68,10 @@ function randomInfraccion() {
 
   return hasPublicacion;
 
+}
+
+function existeInfraccion(compra_id) {
+  return infracciones[compra_id] !== undefined;
 }
 
 const PORT = 3000;

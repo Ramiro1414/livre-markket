@@ -44,6 +44,22 @@ bus.on('enviar_producto', async (payload, res) => {
 
   const { compra_id, producto } = payload;
 
+  const envioActual = findById(compra_id);
+
+  if (mensajeDuplicado(envioActual, 'producto_enviado')) {
+
+    return res.status(400).json({
+      error: `Producto ya enviado`
+    });
+  }
+
+  if (!tieneEstado(envioActual, 'costo_envio_calculado')) {
+
+    return res.status(400).json({
+      error: `Costo de envio no calculado`
+    });
+  }
+
   const estado = 'producto_enviado';
 
   envios[compra_id].estado = estado;
@@ -61,6 +77,15 @@ bus.on('enviar_producto', async (payload, res) => {
 bus.on('calcular_costo_envio', (payload, res) => {
 
   const { compra_id, forma_entrega, producto } = payload;
+
+  const envioActual = findById(compra_id);
+
+  if (mensajeDuplicado(envioActual, 'costo_envio_calculado')) {
+
+    return res.status(400).json({
+      error: `Costo de envio ya calculado`
+    });
+  }
 
   let costo;
 
@@ -90,8 +115,21 @@ bus.on('calcular_costo_envio', (payload, res) => {
 
 });
 
+// ======= funciones helpers =======
 function randomCostoEnvio() {
   return Math.floor(Math.random() * 1000);
+}
+
+function findById(id) {
+  return envios[id];
+}
+
+function tieneEstado(envios, estado) {
+  return envios.historial_estados?.includes(estado);
+}
+
+function mensajeDuplicado(envios, estado) {
+  return (envios && envios.historial_estados?.includes(estado));
 }
 
 const PORT = 3000;
