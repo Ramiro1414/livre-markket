@@ -62,49 +62,138 @@ bus.on('confirmar_compra', async (payload, res) => {
 
   const { compra_id } = payload;
 
-  const compra = findById(compra_id);
+  const compraActual = findById(compra_id);
 
-  compra.estado = 'compra_confirmada'
+  if (mensajeDuplicado(compraActual, 'compra_confirmada')) {
+    
+    return res.status(400).json({
+      error: 'La compra ya se encuentra confirmada'
+    });
 
-  console.log('payload:', payload);
-  console.log('compra:', compra);
+  }
 
-  save(compra);
+  if (!tieneEstado(compraActual, 'pedido_generado')) {
+
+    return res.status(400).json({
+      error: 'No se genero un pedido para la compra indicada (falta estado: pedido_generado)'
+    });
+
+  }
+
+  const estado = 'compra_confirmada';
+
+  const compraActualizada = {
+    ...compraActual,
+    estado,
+    historial_estados: [
+      ...(compraActual.historial_estados || []),
+      estado
+    ]
+  };
+
+  save(compraActualizada);
+
+  console.log(
+    'compra confirmada:',
+    compras[compra_id]
+  );
 
   return res.status(200).json({
-    compra
+    compra: compras[compra_id]
   });
 
 });
 
 bus.on('cancelar_compra', async (payload, res) => {
 
-  //const estado = 'compra_cancelada';
   const { compra } = payload;
 
-  console.log('payload:', payload);
-  console.log('compra:', compra);
+  const compraActual = findById(compra.id);
 
-  save(compra);
+  if (mensajeDuplicado(compraActual, 'compra_cancelada')) {
+    
+    return res.status(400).json({
+      error: 'La compra ya se encuentra cancelada'
+    });
+
+  }
+
+  if (!tieneEstado(compraActual, 'pedido_generado')) {
+
+    return res.status(400).json({
+      error: 'No se genero un pedido para la compra indicada (falta estado: pedido_generado)'
+    });
+
+  }
+
+  const estado = 'compra_cancelada';
+
+  const compraActualizada = {
+    ...compraActual,
+    ...compra,
+    estado,
+    historial_estados: [
+      ...(compraActual.historial_estados || []),
+      estado
+    ]
+  };
+
+  save(compraActualizada);
+
+  console.log(
+    'compra cancelada:',
+    compras[compra.id]
+  );
 
   return res.status(200).json({
-    compra
+    compra: compras[compra.id]
   });
 
 });
 
 bus.on('finalizar_compra', async (payload, res) => {
 
-  //const estado = 'compra_confirmada_y_en_proceso_de_envio';
   const { compra } = payload;
 
-  console.log('payload:', payload);
-  console.log('compra:', compra);
+  const compraActual = findById(compra.id);
 
-  save(compra);
+  if (mensajeDuplicado(compraActual, 'compra_confirmada_y_en_proceso_de_envio')) {
+    
+    return res.status(400).json({
+      error: 'La compra ya se encuentra finalizada'
+    });
+
+  }
+
+  if (!tieneEstado(compraActual, 'pedido_generado') && !tieneEstado(compraActual, 'compra_confirmada')) {
+
+    return res.status(400).json({
+      error: 'Compra invalida por falta de estados previos (falta estado: pedido_generado o compra_confirmada)'
+    });
+
+  }
+
+  const estado = 'compra_confirmada_y_en_proceso_de_envio';
+
+  const compraActualizada = {
+    ...compraActual,
+    ...compra,
+    estado,
+    historial_estados: [
+      ...(compraActual.historial_estados || []),
+      estado
+    ]
+  };
+
+  save(compraActualizada);
+
+  console.log(
+    'compra confirmada y en proceso de envio:',
+    compras[compra.id]
+  );
 
   return res.status(200).json({
-    compra
+    compra: compras[compra.id]
   });
 
 });
@@ -121,6 +210,14 @@ function save(compra) {
 
 function findById(id) {
   return compras[id];
+}
+
+function tieneEstado(compra, estado) {
+  return compra.historial_estados?.includes(estado);
+}
+
+function mensajeDuplicado(compra, estado) {
+  return (compra && compra.historial_estados?.includes(estado));
 }
 
 const PORT = 3000;

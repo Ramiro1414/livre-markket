@@ -42,7 +42,15 @@ app.post('/envios', (req, res) => {
 
 bus.on('enviar_producto', async (payload, res) => {
 
+  const { compra_id, producto } = payload;
+
   const estado = 'producto_enviado';
+
+  envios[compra_id].estado = estado;
+  
+  envios[compra_id].historial_estados.push(estado);
+
+  console.log('producto enviado: ', envios[compra_id]);
 
   return res.status(200).json({
     estado
@@ -52,7 +60,7 @@ bus.on('enviar_producto', async (payload, res) => {
 
 bus.on('calcular_costo_envio', (payload, res) => {
 
-  const { compra_id, forma_entrega } = payload;
+  const { compra_id, forma_entrega, producto } = payload;
 
   let costo;
 
@@ -61,7 +69,18 @@ bus.on('calcular_costo_envio', (payload, res) => {
   else
     costo = 0;
 
-  envios[compra_id] = {id: compra_id, forma_entrega, costo};
+  const estado = 'costo_envio_calculado';
+
+  envios[compra_id] = {
+    id: compra_id, 
+    forma_entrega, 
+    costo,
+    producto,
+    estado,
+    historial_estados: [
+      estado
+    ]
+  };
 
   console.log('envio calculado: ', envios[compra_id]);
 

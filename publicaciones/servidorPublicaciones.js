@@ -48,7 +48,14 @@ bus.on('reservar_producto', (payload, res) => {
 
   const estado_producto = 'producto_reservado';
 
-  productos[compra_id] = {id: compra_id, producto, estado_producto};
+  productos[compra_id] = {
+    id: compra_id, 
+    producto, 
+    estado_producto, 
+    historial_estados: [
+      estado_producto
+    ]
+  };
 
   console.log('reservando producto: ', productos[compra_id]);
 
@@ -60,7 +67,15 @@ bus.on('reservar_producto', (payload, res) => {
 
 bus.on('cancelar_reserva_producto', async (payload, res) => {
 
+  const { compra_id, producto } = payload;
+
   const estado_producto = 'producto_liberado';
+
+  productos[compra_id].estado_producto = estado_producto;
+
+  productos[compra_id].historial_estados.push(estado_producto);
+
+  console.log('cancelando reserva producto: ', productos[compra_id]);
 
   return res.status(200).json({
     estado_producto

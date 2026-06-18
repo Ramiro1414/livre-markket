@@ -16,6 +16,8 @@ const options = {
 
 const bus = new EventEmitter();
 
+const pagos = {};
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -40,7 +42,13 @@ app.post('/pagos', (req, res) => {
 
 bus.on('autorizar_pago', async (payload, res) => {
 
+  const { compra_id } = payload;
+
   const estado_pago = randomEstadoPago();
+
+  pagos[compra_id] = {id: compra_id, estado_pago};
+
+  console.log('autorizando pago: ', pagos[compra_id]);
 
   return res.status(200).json({
     estado_pago

@@ -66,7 +66,7 @@
                         <relativePath>/envios</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento":"calcular_costo_envio","forma_entrega":"${vars.forma_entrega}", "compra_id": ${vars.compra.id}}'</requestBodyJson>
+                        <requestBodyJson>'{"evento":"calcular_costo_envio","forma_entrega":"${vars.forma_entrega}", "compra_id": ${vars.compra.id}, "producto": "${vars.producto}"}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -75,6 +75,7 @@
                         <responseVariable>solicitud_calcular_costo_envio</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
+
 
 
 
@@ -151,7 +152,7 @@ mc.setPayloadJSON(merge)]]></script>
                         <relativePath>/publicaciones</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "cancelar_reserva_producto"}'</requestBodyJson>
+                        <requestBodyJson>'{"evento": "cancelar_reserva_producto", "compra_id": ${vars.compra.id}, "producto": "${vars.producto}"}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -160,6 +161,8 @@ mc.setPayloadJSON(merge)]]></script>
                         <responseVariable>solicitud_cancelar_reservar_producto</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
+
+
                     <variable name="estado_producto" type="STRING" expression="${payload.estado_producto}"/>
                     <log category="INFO" logMessageID="false" logFullPayload="false">
                         <message>La compra fue cancelada por infraccion. Detalle:id: ${vars.compra.id}, producto: ${vars.compra.producto}, estado_producto: ${vars.estado_producto}, forma_pago: ${vars.payload_sincronizacion.forma_pago}, costo: ${vars.payload_sincronizacion.costo}, hasPublicacion: ${vars.payload_sincronizacion.hasPublicacion}, estado: ${vars.compra.estado}</message>
@@ -196,13 +199,11 @@ mc.setPayloadJSON(merge)]]></script>
                         <responseVariable>solicitud_confirmar_compra</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
-
-
                     <http.post configKey="ServidorPagos">
                         <relativePath>/pagos</relativePath>
                         <headers>[]</headers>
                         <requestBodyType>JSON</requestBodyType>
-                        <requestBodyJson>'{"evento": "autorizar_pago"}'</requestBodyJson>
+                        <requestBodyJson>'{"evento": "autorizar_pago", "compra_id": ${vars.compra.id}}'</requestBodyJson>
                         <forceScAccepted>false</forceScAccepted>
                         <disableChunking>false</disableChunking>
                         <forceHttp10>false</forceHttp10>
@@ -211,6 +212,7 @@ mc.setPayloadJSON(merge)]]></script>
                         <responseVariable>solicitud_autorizar_pago</responseVariable>
                         <overwriteBody>true</overwriteBody>
                     </http.post>
+
                     <variable name="estado_pago" type="JSON" expression="${payload}"/>
                     <log category="INFO" logMessageID="false" logFullPayload="false">
                         <message>Autorizacion de pago de la compra: ${vars.estado_pago.estado_pago}</message>
@@ -221,7 +223,7 @@ mc.setPayloadJSON(merge)]]></script>
                                 <relativePath>/publicaciones</relativePath>
                                 <headers>[]</headers>
                                 <requestBodyType>JSON</requestBodyType>
-                                <requestBodyJson>'{"evento": "cancelar_reservar_producto"}'</requestBodyJson>
+                                <requestBodyJson>'{"evento": "cancelar_reserva_producto", "compra_id": ${vars.compra.id}, "producto": "${vars.producto}"}'</requestBodyJson>
                                 <forceScAccepted>false</forceScAccepted>
                                 <disableChunking>false</disableChunking>
                                 <forceHttp10>false</forceHttp10>
@@ -230,6 +232,9 @@ mc.setPayloadJSON(merge)]]></script>
                                 <responseVariable>solicitud_cancelar_reservar_producto_2</responseVariable>
                                 <overwriteBody>true</overwriteBody>
                             </http.post>
+
+
+
                             <http.post configKey="ServidorCompras">
                                 <relativePath>/compras</relativePath>
                                 <headers>[]</headers>
@@ -253,7 +258,7 @@ mc.setPayloadJSON(merge)]]></script>
                                 <relativePath>/envios</relativePath>
                                 <headers>[]</headers>
                                 <requestBodyType>JSON</requestBodyType>
-                                <requestBodyJson>'{"evento": "enviar_producto"}'</requestBodyJson>
+                                <requestBodyJson>'{"evento": "enviar_producto", "compra_id": ${vars.compra.id}, "producto": "${vars.producto}"}'</requestBodyJson>
                                 <forceScAccepted>false</forceScAccepted>
                                 <disableChunking>false</disableChunking>
                                 <forceHttp10>false</forceHttp10>
@@ -262,6 +267,8 @@ mc.setPayloadJSON(merge)]]></script>
                                 <responseVariable>solicitud_enviar_producto</responseVariable>
                                 <overwriteBody>true</overwriteBody>
                             </http.post>
+
+
                             <http.post configKey="ServidorCompras">
                                 <relativePath>/compras</relativePath>
                                 <headers>[]</headers>
