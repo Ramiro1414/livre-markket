@@ -42,14 +42,58 @@ app.post('/publicaciones', async (req, res) => {
   bus.emit(evento, req.body, res);
 });
 
+bus.on('crear_compra', (payload, res) => {
+
+  const { compra_id, estado_compra } = payload;
+
+  if (findById(compra_id)) {
+
+    return res.status(400).json({
+      error: 'La compra ya existe'
+    });
+
+  }
+
+  productos[compra_id] = {
+    id: compra_id,
+    estado_compra,
+    historial_estados: []
+  }
+
+  console.log('compra creada: ', productos[compra_id]);
+
+  return res.status(200).json({
+    mensaje: 'Compra creada'
+  });
+
+});
+
 bus.on('reservar_producto', (payload, res) => {
 
   const { compra_id, producto, estado_compra } = payload;
 
   const productoActual = findById(compra_id);
 
+  if (!productoActual) {
+
+    return res.status(400).json({
+      error: 'La compra no existe'
+    });
+
+  }
+
+  if (productoActual && (
+        productoActual.estado_compra === 'compra_cancelada' ||
+        productoActual.estado_compra === 'compra_confirmada_y_en_proceso_de_envio'
+      )
+    ) {
+      return res.status(400).json({
+        error: 'La compra ya finalizó'
+      });
+    }
+
   if (mensajeDuplicado(productoActual, 'producto_reservado')) {
-    
+
     return res.status(400).json({
       error: 'El producto ya fue reservado'
     });
@@ -58,13 +102,10 @@ bus.on('reservar_producto', (payload, res) => {
   const estado_producto = 'producto_reservado';
 
   productos[compra_id] = {
-    id: compra_id,
+    ...productoActual,
     producto,
-    estado_compra,
     estado_producto,
-    historial_estados: [
-      estado_producto
-    ]
+    historial_estados: [...(productoActual.historial_estados || []), estado_producto]
   };
 
   console.log('reservando producto: ', productos[compra_id]);
@@ -80,6 +121,15 @@ bus.on('cancelar_reserva_producto', async (payload, res) => {
   const { compra_id, producto } = payload;
 
   const productoActual = findById(compra_id);
+
+  if (
+    productoActual.estado_compra === 'compra_cancelada' ||
+    productoActual.estado_compra === 'compra_confirmada_y_en_proceso_de_envio'
+  ) {
+    return res.status(400).json({
+      error: 'La compra ya finalizó'
+    });
+  }
 
   if (mensajeDuplicado(productoActual, 'producto_liberado')) {
     

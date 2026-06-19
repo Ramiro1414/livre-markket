@@ -23,6 +23,19 @@
             <log category="INFO" logMessageID="false" logFullPayload="true">
                 <message>Nueva compra creada: ${vars.compra}Estado de la compra: ${vars.compra.estado}</message>
             </log>
+            <http.post configKey="ServidorPublicaciones">
+                <relativePath>/publicaciones</relativePath>
+                <headers>[]</headers>
+                <requestBodyType>JSON</requestBodyType>
+                <requestBodyJson>'{"evento": "crear_compra", "compra_id": ${vars.compra.id}, "estado_compra": "${vars.compra.estado}"}'</requestBodyJson>
+                <forceScAccepted>false</forceScAccepted>
+                <disableChunking>false</disableChunking>
+                <forceHttp10>false</forceHttp10>
+                <noKeepAlive>false</noKeepAlive>
+                <forcePostPutNobody>false</forcePostPutNobody>
+                <responseVariable>http_post_16</responseVariable>
+                <overwriteBody>true</overwriteBody>
+            </http.post>
             <http.post configKey="ServidorWeb">
                 <relativePath>/web</relativePath>
                 <headers>[]</headers>
@@ -258,8 +271,9 @@ mc.setPayloadJSON(merge)]]></script>
                         <noKeepAlive>false</noKeepAlive>
                         <forcePostPutNobody>false</forcePostPutNobody>
                         <responseVariable>http_post_5</responseVariable>
-                        <overwriteBody>true</overwriteBody>
+                        <overwriteBody>false</overwriteBody>
                     </http.post>
+
 
 
                     <log category="INFO" logMessageID="false" logFullPayload="false">
