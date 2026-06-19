@@ -40,6 +40,32 @@ app.post('/envios', (req, res) => {
   bus.emit(evento, req.body, res);
 });
 
+bus.on('crear_compra', (payload, res) => {
+
+  const { compra_id, estado_compra } = payload;
+
+  if (findById(compra_id)) {
+
+    return res.status(400).json({
+      error: 'La compra ya existe'
+    });
+
+  }
+
+  envios[compra_id] = {
+    id: compra_id,
+    estado_compra,
+    historial_estados: []
+  }
+
+  console.log('compra creada: ', envios[compra_id]);
+
+  return res.status(200).json({
+    mensaje: 'Compra creada'
+  });
+
+});
+
 bus.on('enviar_producto', async (payload, res) => {
 
   const { compra_id, producto } = payload;
@@ -97,13 +123,14 @@ bus.on('calcular_costo_envio', (payload, res) => {
   const estado = 'costo_envio_calculado';
 
   envios[compra_id] = {
-    id: compra_id, 
-    forma_entrega, 
+    ...envioActual,
+    forma_entrega,
     costo,
     producto,
     estado,
     estado_compra,
     historial_estados: [
+      ...(envioActual.historial_estados || []),
       estado
     ]
   };

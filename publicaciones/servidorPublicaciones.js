@@ -122,6 +122,14 @@ bus.on('cancelar_reserva_producto', async (payload, res) => {
 
   const productoActual = findById(compra_id);
 
+  if (!productoActual) {
+
+    return res.status(400).json({
+      error: 'La compra no existe'
+    });
+
+  }
+
   if (
     productoActual.estado_compra === 'compra_cancelada' ||
     productoActual.estado_compra === 'compra_confirmada_y_en_proceso_de_envio'

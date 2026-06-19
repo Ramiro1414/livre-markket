@@ -40,19 +40,42 @@ app.post('/pagos', (req, res) => {
   bus.emit(evento, req.body, res);
 });
 
+bus.on('crear_compra', (payload, res) => {
+
+  const { compra_id, estado_compra } = payload;
+
+  if (findById(compra_id)) {
+
+    return res.status(400).json({
+      error: 'La compra ya existe'
+    });
+
+  }
+
+  pagos[compra_id] = {
+    id: compra_id,
+    estado_compra
+  }
+
+  console.log('compra creada: ', pagos[compra_id]);
+
+  return res.status(200).json({
+    mensaje: 'Compra creada'
+  });
+
+});
+
 bus.on('autorizar_pago', async (payload, res) => {
 
   const { compra_id, estado_compra } = payload;
 
-  if (existePago(compra_id)) {
-    return res.status(400).json({
-      error: 'Ya se autorizo un pago para esta compra'
-    });
-  }
-
   const estado_pago = randomEstadoPago();
 
-  pagos[compra_id] = {id: compra_id, estado_pago, estado_compra};
+  pagos[compra_id] = {
+    ...pagos[compra_id],
+    estado_pago,
+    estado_compra
+  };
 
   console.log('autorizando pago: ', pagos[compra_id]);
 

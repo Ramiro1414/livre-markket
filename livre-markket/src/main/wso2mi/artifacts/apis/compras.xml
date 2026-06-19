@@ -23,19 +23,84 @@
             <log category="INFO" logMessageID="false" logFullPayload="true">
                 <message>Nueva compra creada: ${vars.compra}Estado de la compra: ${vars.compra.estado}</message>
             </log>
-            <http.post configKey="ServidorPublicaciones">
-                <relativePath>/publicaciones</relativePath>
-                <headers>[]</headers>
-                <requestBodyType>JSON</requestBodyType>
-                <requestBodyJson>'{"evento": "crear_compra", "compra_id": ${vars.compra.id}, "estado_compra": "${vars.compra.estado}"}'</requestBodyJson>
-                <forceScAccepted>false</forceScAccepted>
-                <disableChunking>false</disableChunking>
-                <forceHttp10>false</forceHttp10>
-                <noKeepAlive>false</noKeepAlive>
-                <forcePostPutNobody>false</forcePostPutNobody>
-                <responseVariable>http_post_16</responseVariable>
-                <overwriteBody>true</overwriteBody>
-            </http.post>
+            <scatter-gather parallel-execution="true" target="Variable" target-variable="resultado_crear_compras" result-content-type="JSON">
+                <aggregation expression="${payload}"/>
+                <sequence>
+                    <http.post configKey="ServidorPublicaciones">
+                        <relativePath>/publicaciones</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "crear_compra", "compra_id": ${vars.compra.id}, "estado_compra": "${vars.compra.estado}"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>http_post_17</responseVariable>
+                        <overwriteBody>false</overwriteBody>
+                    </http.post>
+                </sequence>
+                <sequence>
+                    <http.post configKey="ServidorPagos">
+                        <relativePath>/pagos</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "crear_compra", "compra_id": ${vars.compra.id}, "estado_compra": "${vars.compra.estado}"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>http_post_18</responseVariable>
+                        <overwriteBody>false</overwriteBody>
+                    </http.post>
+                </sequence>
+                <sequence>
+                    <http.post configKey="ServidorEnvios">
+                        <relativePath>/envios</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "crear_compra", "compra_id": ${vars.compra.id}, "estado_compra": "${vars.compra.estado}"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>http_post_19</responseVariable>
+                        <overwriteBody>false</overwriteBody>
+                    </http.post>
+                </sequence>
+                <sequence>
+                    <http.post configKey="ServidorWeb">
+                        <relativePath>/web</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "crear_compra", "compra_id": ${vars.compra.id}, "estado_compra": "${vars.compra.estado}"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>http_post_20</responseVariable>
+                        <overwriteBody>false</overwriteBody>
+                    </http.post>
+                </sequence>
+                <sequence>
+                    <http.post configKey="ServidorInfracciones">
+                        <relativePath>/infracciones</relativePath>
+                        <headers>[]</headers>
+                        <requestBodyType>JSON</requestBodyType>
+                        <requestBodyJson>'{"evento": "crear_compra", "compra_id": ${vars.compra.id}, "estado_compra": "${vars.compra.estado}"}'</requestBodyJson>
+                        <forceScAccepted>false</forceScAccepted>
+                        <disableChunking>false</disableChunking>
+                        <forceHttp10>false</forceHttp10>
+                        <noKeepAlive>false</noKeepAlive>
+                        <forcePostPutNobody>false</forcePostPutNobody>
+                        <responseVariable>http_post_21</responseVariable>
+                        <overwriteBody>false</overwriteBody>
+                    </http.post>
+                </sequence>
+            </scatter-gather>
             <http.post configKey="ServidorWeb">
                 <relativePath>/web</relativePath>
                 <headers>[]</headers>

@@ -69,6 +69,31 @@ app.post('/web', (req, res) => {
   bus.emit(evento, req.body, res);
 });
 
+bus.on('crear_compra', (payload, res) => {
+
+  const { compra_id, estado_compra } = payload;
+
+  if (findById(compra_id)) {
+
+    return res.status(400).json({
+      error: 'La compra ya existe'
+    });
+
+  }
+
+  datos_compra[compra_id] = {
+    id: compra_id,
+    estado_compra
+  }
+
+  console.log('compra creada: ', datos_compra[compra_id]);
+
+  return res.status(200).json({
+    mensaje: 'Compra creada'
+  });
+
+});
+
 bus.on('solicitar_forma_entrega', (payload, res) => {
 
   const { compra_id, estado_compra } = payload;

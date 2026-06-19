@@ -40,19 +40,42 @@ app.post('/infracciones', (req, res) => {
   bus.emit(evento, req.body, res);
 });
 
+bus.on('crear_compra', (payload, res) => {
+
+  const { compra_id, estado_compra } = payload;
+
+  if (findById(compra_id)) {
+
+    return res.status(400).json({
+      error: 'La compra ya existe'
+    });
+
+  }
+
+  infracciones[compra_id] = {
+    id: compra_id,
+    estado_compra
+  }
+
+  console.log('compra creada: ', infracciones[compra_id]);
+
+  return res.status(200).json({
+    mensaje: 'Compra creada'
+  });
+
+});
+
 bus.on('detectar_infracciones', async (payload, res) => {
 
   const { compra_id, estado_compra } = payload;
 
-  if (existeInfraccion(compra_id)) {
-    return res.status(400).json({
-      error: 'Ya se detecto una infraccion para esta compra'
-    });
-  }
-
   const hasPublicacion = randomInfraccion();
 
-  infracciones[compra_id] = {id: compra_id, hasPublicacion, estado_compra};
+  infracciones[compra_id] = {
+    ...infracciones[compra_id],
+    hasPublicacion,
+    estado_compra
+  };
 
   console.log('guardando infraccion: ', infracciones[compra_id]);
 

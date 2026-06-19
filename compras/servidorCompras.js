@@ -53,6 +53,8 @@ bus.on('crear_pedido', (payload, res) => {
     historial_estados: ['pedido_generado']
   };
 
+  console.log('compra creada: ', compra);
+
   save(compra);
 
   res.status(200).json(compra);
