@@ -42,7 +42,7 @@ app.post('/infracciones', (req, res) => {
 
 bus.on('detectar_infracciones', async (payload, res) => {
 
-  const { compra_id } = payload;
+  const { compra_id, estado_compra } = payload;
 
   if (existeInfraccion(compra_id)) {
     return res.status(400).json({
@@ -52,7 +52,7 @@ bus.on('detectar_infracciones', async (payload, res) => {
 
   const hasPublicacion = randomInfraccion();
 
-  infracciones[compra_id] = {id: compra_id, hasPublicacion};
+  infracciones[compra_id] = {id: compra_id, hasPublicacion, estado_compra};
 
   console.log('guardando infraccion: ', infracciones[compra_id]);
 
@@ -62,12 +62,52 @@ bus.on('detectar_infracciones', async (payload, res) => {
 
 });
 
+bus.on('cancelar_compra', async (payload, res) => {
+
+    const { compra_id } = payload;
+
+    const estado_compra = 'compra_cancelada';
+
+    const infraccionActual = findById(compra_id);
+
+    infraccionActual.estado_compra = estado_compra;
+
+    console.log('compra cancelada: ', infraccionActual);
+
+    return res.status(200).json({
+      infraccionActual
+    });
+
+  });
+
+  bus.on('confirmar_compra', async (payload, res) => {
+
+    const { compra_id } = payload;
+
+    const estado_compra = 'compra_confirmada_y_en_proceso_de_envio';
+
+    const infraccionActual = findById(compra_id);
+
+    infraccionActual.estado_compra = estado_compra;
+
+    console.log('compra finalizada: ', infraccionActual);
+
+    return res.status(200).json({
+      infraccionActual
+    });
+
+  });
+
 function randomInfraccion() {
 
   hasPublicacion = Math.random() > 0.7 ? true : false;
 
   return hasPublicacion;
 
+}
+
+function findById(id) {
+  return infracciones[id];
 }
 
 function existeInfraccion(compra_id) {

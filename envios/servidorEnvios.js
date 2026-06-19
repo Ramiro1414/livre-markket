@@ -76,7 +76,7 @@ bus.on('enviar_producto', async (payload, res) => {
 
 bus.on('calcular_costo_envio', (payload, res) => {
 
-  const { compra_id, forma_entrega, producto } = payload;
+  const { compra_id, forma_entrega, producto, estado_compra } = payload;
 
   const envioActual = findById(compra_id);
 
@@ -102,6 +102,7 @@ bus.on('calcular_costo_envio', (payload, res) => {
     costo,
     producto,
     estado,
+    estado_compra,
     historial_estados: [
       estado
     ]
@@ -114,6 +115,43 @@ bus.on('calcular_costo_envio', (payload, res) => {
   });
 
 });
+
+bus.on('cancelar_compra', async (payload, res) => {
+
+  const { compra_id } = payload;
+
+  const estado_compra = 'compra_cancelada';
+
+  const envioActual = findById(compra_id);
+
+  envioActual.estado_compra = estado_compra;
+
+  console.log('compra cancelada: ', envioActual);
+
+  return res.status(200).json({
+    envioActual
+  });
+
+});
+
+bus.on('confirmar_compra', async (payload, res) => {
+
+  const { compra_id } = payload;
+
+  const estado_compra = 'compra_confirmada_y_en_proceso_de_envio';
+
+  const envioActual = findById(compra_id);
+
+  envioActual.estado_compra = estado_compra;
+
+  console.log('compra finalizada: ', envioActual);
+
+  return res.status(200).json({
+    envioActual
+  });
+
+});
+
 
 // ======= funciones helpers =======
 function randomCostoEnvio() {

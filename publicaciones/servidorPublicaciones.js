@@ -44,7 +44,7 @@ app.post('/publicaciones', async (req, res) => {
 
 bus.on('reservar_producto', (payload, res) => {
 
-  const { compra_id, producto } = payload;
+  const { compra_id, producto, estado_compra } = payload;
 
   const productoActual = findById(compra_id);
 
@@ -58,9 +58,10 @@ bus.on('reservar_producto', (payload, res) => {
   const estado_producto = 'producto_reservado';
 
   productos[compra_id] = {
-    id: compra_id, 
-    producto, 
-    estado_producto, 
+    id: compra_id,
+    producto,
+    estado_compra,
+    estado_producto,
     historial_estados: [
       estado_producto
     ]
@@ -108,6 +109,42 @@ bus.on('cancelar_reserva_producto', async (payload, res) => {
   });
 
 });
+
+bus.on('cancelar_compra', async (payload, res) => {
+
+    const { compra_id } = payload;
+
+    const estado_compra = 'compra_cancelada';
+
+    const productoActual = findById(compra_id);
+
+    productoActual.estado_compra = estado_compra;
+
+    console.log('compra cancelada: ', productoActual);
+
+    return res.status(200).json({
+      productoActual
+    });
+
+  });
+
+  bus.on('confirmar_compra', async (payload, res) => {
+
+    const { compra_id } = payload;
+
+    const estado_compra = 'compra_confirmada_y_en_proceso_de_envio';
+
+    const productoActual = findById(compra_id);
+
+    productoActual.estado_compra = estado_compra;
+
+    console.log('compra finalizada: ', productoActual);
+
+    return res.status(200).json({
+      productoActual
+    });
+
+  });
 
 // ======= funciones helpers =======
 function findById(id) {

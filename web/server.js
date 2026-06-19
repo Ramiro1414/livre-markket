@@ -71,14 +71,15 @@ app.post('/web', (req, res) => {
 
 bus.on('solicitar_forma_entrega', (payload, res) => {
 
-  const { compra_id } = payload;
+  const { compra_id, estado_compra } = payload;
 
   const forma_entrega = randomFormaEntrega();
 
   datos_compra[compra_id] = {
 	...(datos_compra[compra_id] || {}),
 	id: compra_id,
-	forma_entrega
+	forma_entrega,
+	estado_compra
   };
 
   console.log('datos de la compra: ', datos_compra[compra_id]);
@@ -108,6 +109,46 @@ bus.on('solicitar_forma_pago', (payload, res) => {
   });
 
 });
+
+bus.on('cancelar_compra', async (payload, res) => {
+
+    const { compra_id } = payload;
+
+    const estado_compra = 'compra_cancelada';
+
+    const compraActual = findById(compra_id);
+
+    compraActual.estado_compra = estado_compra;
+
+    console.log('compra cancelada: ', compraActual);
+
+    return res.status(200).json({
+      compraActual
+    });
+
+  });
+
+  bus.on('confirmar_compra', async (payload, res) => {
+
+    const { compra_id } = payload;
+
+    const estado_compra = 'compra_confirmada_y_en_proceso_de_envio';
+
+    const compraActual = findById(compra_id);
+
+    compraActual.estado_compra = estado_compra;
+
+    console.log('compra finalizada: ', compraActual);
+
+    return res.status(200).json({
+      compraActual
+    });
+
+  });
+
+function findById(id) {
+  return datos_compra[id];
+}
 
 function randomFormaEntrega() {
 
